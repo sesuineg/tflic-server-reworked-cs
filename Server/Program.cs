@@ -2,10 +2,6 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Server;
-using Swashbuckle.AspNetCore.Swagger;
-using Server.Models.Config;
-using Server.Models.Constants;
-using Server.Models.Authentication;
 using Server.Models.Contexts;
 using Server.Options;
 
@@ -15,26 +11,17 @@ var builderServices = builder.Services;
 
 builderServices.AddControllers().AddNewtonsoftJson();
 
-// Add DbContexts to static aggregator
-var dbConnectionString = buildConfiguration.GetConnectionString("DbConnectionString")!;
-DbContexts.DbConnectionString = dbConnectionString;
-
+ConfigureDatabase();
 ConfigureSwaggerGen();
 ConfigureJwtOptions();
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+UseSwaggerGen();
 
 app.UseHttpsRedirection();
         
-#if AUTH 
-        app.UseAuthentication();
-#endif
+UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
@@ -42,6 +29,13 @@ app.MapControllers();
 app.Run();
 
 
+
+void ConfigureDatabase()
+{
+    // Add DbContexts to static aggregator
+    var dbConnectionString = buildConfiguration.GetConnectionString("DbConnectionString")!;
+    DbContexts.DbConnectionString = dbConnectionString;
+}
 
 void ConfigureSwaggerGen()
 {
@@ -111,3 +105,18 @@ void ConfigureJwtOptions()
         );
 }
 
+void UseAuthentication()
+{
+#if AUTH 
+        app.UseAuthentication();
+#endif
+}
+
+void UseSwaggerGen()
+{
+    if (app.Environment.IsDevelopment())
+    {
+        app.UseSwagger();
+        app.UseSwaggerUI();
+    }
+}
