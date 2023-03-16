@@ -1,6 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Server", "Server\Server.csproj", "{0EFC194E-4ABF-4842-B7A7-8F730E3ACC48}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TFlic", "TFlic\TFlic.csproj", "{0EFC194E-4ABF-4842-B7A7-8F730E3ACC48}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TokenSecurityKeyGenerator", "TokenSecurityKeyGenerator\TokenSecurityKeyGenerator.csproj", "{C3D76328-1B01-4670-B3C3-F0D3691B51E8}"
 EndProject
