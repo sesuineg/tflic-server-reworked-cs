@@ -29,6 +29,57 @@
       <Content Include="..\.dockerignore">
         <Link>.dockerignore</Link>
       </Content>
+      <Content Include="..\initdb\101_accounts.sql">
+        <Link>initdb\101_accounts.sql</Link>
+      </Content>
+      <Content Include="..\initdb\102_auth_info.sql">
+        <Link>initdb\102_auth_info.sql</Link>
+      </Content>
+      <Content Include="..\initdb\103_organizations.sql">
+        <Link>initdb\103_organizations.sql</Link>
+      </Content>
+      <Content Include="..\initdb\104_user_groups.sql">
+        <Link>initdb\104_user_groups.sql</Link>
+      </Content>
+      <Content Include="..\initdb\105_user_groups_accounts.sql">
+        <Link>initdb\105_user_groups_accounts.sql</Link>
+      </Content>
+      <Content Include="..\initdb\106_projects.sql">
+        <Link>initdb\106_projects.sql</Link>
+      </Content>
+      <Content Include="..\initdb\107_boards.sql">
+        <Link>initdb\107_boards.sql</Link>
+      </Content>
+      <Content Include="..\initdb\108_columns.sql">
+        <Link>initdb\108_columns.sql</Link>
+      </Content>
+      <Content Include="..\initdb\109_tasks.sql">
+        <Link>initdb\109_tasks.sql</Link>
+      </Content>
+      <Content Include="..\initdb\201_accounts.sql">
+        <Link>initdb\201_accounts.sql</Link>
+      </Content>
+      <Content Include="..\initdb\202_organizations.sql">
+        <Link>initdb\202_organizations.sql</Link>
+      </Content>
+      <Content Include="..\initdb\203_user_groups.sql">
+        <Link>initdb\203_user_groups.sql</Link>
+      </Content>
+      <Content Include="..\initdb\204_user_groups_accounts.sql">
+        <Link>initdb\204_user_groups_accounts.sql</Link>
+      </Content>
+      <Content Include="..\initdb\205_projects.sql">
+        <Link>initdb\205_projects.sql</Link>
+      </Content>
+      <Content Include="..\initdb\206_boards.sql">
+        <Link>initdb\206_boards.sql</Link>
+      </Content>
+      <Content Include="..\initdb\207_columns.sql">
+        <Link>initdb\207_columns.sql</Link>
+      </Content>
+      <Content Include="..\initdb\208_tasks.sql">
+        <Link>initdb\208_tasks.sql</Link>
+      </Content>
     </ItemGroup>
 
 </Project>

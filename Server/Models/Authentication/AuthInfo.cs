@@ -24,14 +24,14 @@ public class AuthInfo
     /// Хеш пароля
     /// </summary>
     /// <remarks>Хеш закодирован в base64</remarks>
-    [Column("password_hash")]
+    [Column("password_hash"), MaxLength(44)]
     public required string PasswordHash { get; set; }
     
-    /// <summary>
-    /// Токен обновления
-    /// </summary>
-    [Column("refresh_token")]
+    [Column("refresh_token"), MaxLength(44)]
     public string? RefreshToken { get; set; }
+    
+    [Column("refresh_token_expiration_time")]
+    public DateTime? RefreshTokenExpirationTime { get; set; } 
 
     public Account Account { get; set; } = null!;
 }

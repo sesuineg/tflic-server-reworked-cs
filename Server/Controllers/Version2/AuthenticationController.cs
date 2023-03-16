@@ -1,9 +1,11 @@
 ﻿using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Server.Controllers.Version2.DTO;
 using Server.Models.Authentication;
 using Server.Models.Contexts;
+using Server.Services;
 using AccountDto = Server.Controllers.Version2.DTO.AccountDto;
 using AuthorizeRequestDto = Server.Controllers.Version2.DTO.AuthorizeRequestDto;
 using AuthorizeResponseDto = Server.Controllers.Version2.DTO.AuthorizeResponseDto;
@@ -16,11 +18,19 @@ using ModelAccount = Models.Organization.Accounts.Account;
 [Route("api/v2")]
 public class AuthenticationController : ControllerBase
 {
+    public AuthenticationController(
+        IAccessTokenService accessTokenService, 
+        IRefreshTokenService refreshTokenService) 
+    {
+        _accessTokenService = accessTokenService;
+        _refreshTokenService = refreshTokenService;
+    }
+    
     /// <summary>
     /// Аутентификация и авторизация пользователя
     /// </summary>
-    [HttpPost("/authorize")]
-    public ActionResult<AuthorizeResponseDto> Authorize(AuthorizeRequestDto authorizeRequest)
+    [HttpPost("authorize")]
+    public ActionResult<AuthorizeResponseDto>Authorize(AuthorizeRequestDto authorizeRequest)
     {
         using var authInfoContext = DbContexts.Get<AuthInfoContext>();
         
@@ -33,66 +43,53 @@ public class AuthenticationController : ControllerBase
         
         authInfo.Account.UserGroups = authInfo.Account.GetUserGroups();
 
-        var (accessToken, refreshToken) = AuthenticationManager.GenerateTokens(authInfo.Account);
-        var encodedAccessToken = new JwtSecurityTokenHandler().WriteToken(accessToken);
-        var encodedRefreshToken = new JwtSecurityTokenHandler().WriteToken(refreshToken);
+        var (accessToken, refreshToken, refreshTokenExpirationTime) = GenerateTokens(authInfo.AccountId); 
         
-        // сохраняем сгенерированный refreshToken в базу данных
-        authInfo.RefreshToken = encodedRefreshToken; 
+        // сохраняем сгенерированный refreshToken в базу данных 
+        authInfo.RefreshToken = refreshToken; 
+        authInfo.RefreshTokenExpirationTime = refreshTokenExpirationTime; 
         authInfoContext.SaveChanges();
         
         return Ok(new AuthorizeResponseDto(
             new AccountDto(authInfo.Account),
-            new TokenPairDto(encodedAccessToken, encodedRefreshToken)
+            new TokenPairDto(accessToken, refreshToken)
         ));
     }
-
-    /// <summary>
-    /// Метод проверяет валидность токена доступа
-    /// </summary>
-    /// <param name="accessToken">Проверяемый токен доступа</param>
-    /// <returns>true в случае, если токен валиден, иначе - false</returns>
-    [HttpPost("/try_authorize")]
-    public ActionResult<bool> TryAuthorize([FromBody] string accessToken)
-    {
-        return Ok(AuthenticationManager.IsTokenValid(accessToken, AuthenticationManager.TokenType.Access));
-    }
-
+    
     /// <summary>
     /// Обновление токена 
     /// </summary>
-    [HttpPost("/refresh")]
-    public ActionResult<TokenPairDto> Refresh(RefreshTokenRequestDto request) 
+    [HttpPost("refresh")]
+    public ActionResult<TokenPairDto> Refresh(TokenPairDto request) 
     {
         using var accountContext = DbContexts.Get<AccountContext>();
         using var authInfoContext = DbContexts.Get<AuthInfoContext>();
-        
+
+        var account = _accessTokenService.GetPrincipalFromToken(request.AccessToken); // todo invalid principal check
+        var sidClaim = account.Claims.FirstOrDefault(claim => claim.Type == ClaimTypes.Sid);
+        if (sidClaim is null) return NotFound();
+
+        var accountId = ulong.Parse(sidClaim.Value);
         var authInfo = authInfoContext.Info
-            .Where(info => info.Login == request.Login)
-            .Include(info => info.Account)
-            .SingleOrDefault();
+            .SingleOrDefault(info => info.AccountId == accountId);
         if (authInfo is null) { return NotFound(); }
 
-        var refreshTokenValid = AuthenticationManager.IsTokenValid(
-            request.RefreshToken,
-            AuthenticationManager.TokenType.Refresh
-        );
+        var refreshTokenValid = _refreshTokenService.IsTokenValid(request.RefreshToken, authInfo.AccountId);
         if (!refreshTokenValid) { return Unauthorized(); }
-
-        var (accessToken, refreshToken) = AuthenticationManager.GenerateTokens(authInfo.Account);
-        var encodedAccessToken = new JwtSecurityTokenHandler().WriteToken(accessToken);
-        var encodedRefreshToken = new JwtSecurityTokenHandler().WriteToken(refreshToken);
         
-        authInfo.RefreshToken = encodedRefreshToken;
+        var (accessToken, refreshToken, refreshTokenExpirationTime) = GenerateTokens(authInfo.AccountId);
+
+        authInfo.RefreshToken = refreshToken;
+        authInfo.RefreshTokenExpirationTime = refreshTokenExpirationTime;
         authInfoContext.SaveChanges();
         
-        return Ok(new TokenPairDto(encodedAccessToken, encodedRefreshToken));
+        return Ok(new TokenPairDto(accessToken, refreshToken));
     }
 
     /// <summary>
     /// Регистрация пользователя в системе
     /// </summary>
-    [HttpPost("/register")]
+    [HttpPost("register")]
     public ActionResult<AuthorizeResponseDto> Register(RegisterAccountRequestDto account)
     {
         using var authInfoContext = DbContexts.Get<AuthInfoContext>();
@@ -112,16 +109,36 @@ public class AuthenticationController : ControllerBase
         newAccount = accountContext.Add(newAccount).Entity;
         accountContext.SaveChanges();
         
-        var (accessToken, refreshToken) = AuthenticationManager.GenerateTokens(newAccount);
-        var encodedAccessToken = new JwtSecurityTokenHandler().WriteToken(accessToken);
-        var encodedRefreshToken = new JwtSecurityTokenHandler().WriteToken(refreshToken);
+        var (accessToken, refreshToken, refreshTokenExpirationTime) = GenerateTokens(newAccount.Id);
 
-        newAccount.AuthInfo.RefreshToken = encodedRefreshToken;
+        newAccount.AuthInfo.RefreshToken = refreshToken;
+        newAccount.AuthInfo.RefreshTokenExpirationTime = refreshTokenExpirationTime;
         accountContext.SaveChanges();
         
         return Ok(new AuthorizeResponseDto(
             new AccountDto(newAccount), 
-            new TokenPairDto(encodedAccessToken, encodedRefreshToken)
+            new TokenPairDto(accessToken, refreshToken)
         ));
     }
+
+    private (string accesToken, string refreshToken, DateTime refreshTokenExpirationTime) GenerateTokens(ulong ownerId)
+    {
+        var accessTokenClaims = new List<Claim>{
+            CreateClaim(ClaimTypes.Sid, ownerId.ToString())
+        };
+        var accessToken = _accessTokenService.Generate(accessTokenClaims);
+        var (refreshToken, expirationTime) = _refreshTokenService.Generate();
+
+        return (accessToken, refreshToken, expirationTime);
+
+
+
+        Claim CreateClaim(string type, string value) =>
+            new Claim(type, value, ClaimValueTypes.String);
+    }
+    
+    // private bool IsRefreshTokenValid(string token, )    
+
+    private readonly IAccessTokenService _accessTokenService;
+    private readonly IRefreshTokenService _refreshTokenService;
 }

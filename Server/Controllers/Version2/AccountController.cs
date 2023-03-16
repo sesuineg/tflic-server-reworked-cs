@@ -15,13 +15,13 @@ using Microsoft.AspNetCore.Authorization;
 [Authorize]
 #endif
 [ApiController]
-[Route("api/v2/accounts/")]
+[Route("api/v2/accounts")]
 public class AccountController : ControllerBase
 {
     /// <summary>
     /// Получение аккаунта с указанным Login
     /// </summary>
-    [HttpGet("/{accountLogin}")]
+    [HttpGet("{accountLogin}")]
     public ActionResult<AccountDto> GetAccountByLogin(string accountLogin)
     {
         using var authInfoContext = DbContexts.Get<AuthInfoContext>();
@@ -49,7 +49,7 @@ public class AccountController : ControllerBase
     /// <summary>
     /// Получение аккаунта с указанным Id
     /// </summary>
-    [HttpGet("/{accountId:long}")]
+    [HttpGet("{accountId:long}")]
     public ActionResult<AccountDto> GetAccountById(long accountId)
     {
         using var accountContext = DbContexts.Get<AccountContext>();
@@ -68,7 +68,7 @@ public class AccountController : ControllerBase
     /// <summary>
     /// Изменение данных аккаунта с указанным Id
     /// </summary>
-    [HttpPatch("/{accountId}")]
+    [HttpPatch("{accountId}")]
     public ActionResult<AccountDto> PatchAccount(ulong accountId, [FromBody] JsonPatchDocument<Account> patch)
     {
         using var accountContext = DbContexts.Get<AccountContext>();
@@ -89,7 +89,7 @@ public class AccountController : ControllerBase
     /// <summary>
     /// Получение списка организаций, в которых состоит указанный аккаунт
     /// </summary>
-    [HttpGet("/{accountId}/Organizations")]
+    [HttpGet("{accountId}/Organizations")]
     public ActionResult<IEnumerable<ulong>> GetAccountsOrganizations(ulong accountId)
     {
         using var accountContext = DbContexts.Get<AccountContext>();
