@@ -1,4 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -15,11 +15,7 @@ using ModelOrganizationException = Models.Organization.OrganizationException;
 using ModelUserGroup = Models.Organization.Accounts.UserGroup;
 using ModelOrganization = Models.Organization.Organization;
 
-#if AUTH
-using Models.Authentication;
-using Microsoft.AspNetCore.Authorization;
 [Authorize]
-#endif
 [ApiController]
 [Route("api/v2")]
 public class OrganizationController : ControllerBase
@@ -86,11 +82,6 @@ public class OrganizationController : ControllerBase
     [HttpPatch("{organizationId}")]
     public ActionResult<OrganizationDto> EditOrganization(ulong organizationId, [FromBody] JsonPatchDocument<ModelOrganization> patch)
     {
-#if AUTH
-        var token = TokenProvider.GetToken(Request);
-        if (!AuthenticationManager.Authorize(token, OrganizationId, adminRequired: true)) { return Forbid(); }
-#endif
-        
         var organization = DbValueRetriever.Retrieve(
             _organizationContext.Organizations.Include(org => org.Projects), 
             organizationId, 
@@ -110,11 +101,6 @@ public class OrganizationController : ControllerBase
     [HttpGet("{organizationId}/members")]
     public ActionResult<IEnumerable<AccountDto>> GetOrganizationMembers(ulong organizationId)
     {
-#if AUTH
-        var token = TokenProvider.GetToken(Request);
-        if (!AuthenticationManager.Authorize(token, OrganizationId, allowNoRole: true)) { return Forbid(); }
-#endif
-        
         var organization = DbValueRetriever.Retrieve(_organizationContext.Organizations, organizationId, nameof(ModelOrganization.Id));
         if (organization is null) { return NotFound(); }
         
@@ -132,11 +118,6 @@ public class OrganizationController : ControllerBase
     // todo заменить логин на id
     public ActionResult<AccountDto> AddUserToOrganization(ulong organizationId, [FromBody] string login)
     {
-#if AUTH
-        var token = TokenProvider.GetToken(Request);
-        if (!AuthenticationManager.Authorize(token, OrganizationId, adminRequired: true)) { return Forbid(); }
-#endif
-
         var authInfo = DbValueRetriever.Retrieve(_authInfoContext.Info, login, nameof(AuthInfo.Login));
         if (authInfo is null) { return NotFound(); }
         
@@ -162,11 +143,6 @@ public class OrganizationController : ControllerBase
     [HttpDelete("organizations/{organizationId}/members/{memberId}")]
     public ActionResult DeleteOrganizationsMember(ulong organizationId, ulong memberId)
     {
-#if AUTH
-        var token = TokenProvider.GetToken(Request);
-        if (!AuthenticationManager.Authorize(token, OrganizationId, adminRequired: true)) { return Forbid(); }
-#endif
-
         var organization = DbValueRetriever.Retrieve(_organizationContext.Organizations, organizationId, nameof(ModelOrganization.Id));
         if (organization is null) { return NotFound(); }
         
@@ -183,11 +159,6 @@ public class OrganizationController : ControllerBase
     [HttpGet("{organizationId}/userGroups")]
     public ActionResult<IEnumerable<UserGroupDto>> GetUserGroups(ulong organizationId)
     {
-#if AUTH
-        var token = TokenProvider.GetToken(Request);
-        if (!AuthenticationManager.Authorize(token, OrganizationId, allowNoRole: true)) { return Forbid(); }
-#endif
-        
         var organization = DbValueRetriever.Retrieve(_organizationContext.Organizations, organizationId, nameof(ModelOrganization.Id));
         if (organization is null) { return NotFound(); }
         
@@ -201,11 +172,6 @@ public class OrganizationController : ControllerBase
     [HttpGet("{organizationId}/userGroups/{userGroupLocalId}/members")]
     public ActionResult<IEnumerable<AccountDto>> GetUserGroupMembers(ulong organizationId, short userGroupLocalId)
     {
-#if AUTH
-        var token = TokenProvider.GetToken(Request);
-        if (!AuthenticationManager.Authorize(token, OrganizationId, allowNoRole: true)) { return Forbid(); }
-#endif
-        
         var organization = DbValueRetriever.Retrieve(_organizationContext.Organizations, organizationId, nameof(ModelOrganization.Id));
         if (organization is null) { return NotFound(); }
         
@@ -222,11 +188,6 @@ public class OrganizationController : ControllerBase
     [HttpPost("{organizationId}/userGroups/{userGroupLocalId}/members/{memberId}")]
     public ActionResult AddMemberToUserGroup(ulong organizationId, short userGroupLocalId, ulong memberId)
     {
-#if AUTH
-        var token = TokenProvider.GetToken(Request);
-        if (!AuthenticationManager.Authorize(token, OrganizationId, adminRequired: true)) { return Forbid(); }
-#endif
-        
         var organization = DbValueRetriever.Retrieve(_organizationContext.Organizations, organizationId, nameof(ModelOrganization.Id));
         if (organization is null) { return NotFound(); }
         
@@ -250,11 +211,6 @@ public class OrganizationController : ControllerBase
     [HttpDelete("{organizationId}/userGroups/{userGroupLocalId}/members/{memberId}")]
     public ActionResult DeleteMemberFromUserGroup(ulong organizationId, short userGroupLocalId, ulong memberId)
     {
-#if AUTH
-        var token = TokenProvider.GetToken(Request);
-        if (!AuthenticationManager.Authorize(token, OrganizationId, adminRequired: true)) { return Forbid(); }
-#endif
-        
         var organization = DbValueRetriever.Retrieve(_organizationContext.Organizations, organizationId, nameof(ModelOrganization.Id));
         if (organization is null) { return NotFound(); }
 

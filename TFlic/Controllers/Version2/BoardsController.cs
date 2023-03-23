@@ -1,20 +1,15 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TFlic.Controllers.Version2.DTO.GET;
-using TFlic.Controllers.Version2.Service;
 using TFlic.Models.Contexts;
 using TFlic.Models.Organization.Project;
 using TFlic.Controllers.Version2.DTO.POST;
 
 namespace TFlic.Controllers.Version2;
 
-#if AUTH
-using Models.Authentication;
-using Microsoft.AspNetCore.Authorization;
 [Authorize]
-#endif
 [ApiController]
 [Route("api/v2")]
 public class BoardsController : ControllerBase
@@ -29,11 +24,6 @@ public class BoardsController : ControllerBase
     [HttpGet("projects/{projectId}/boards")]
     public ActionResult<IEnumerable<BoardGet>> GetBoards(ulong projectId)
     {
-#if AUTH
-        var token = TokenProvider.GetToken(Request);
-        if (!AuthenticationManager.Authorize(token, OrganizationId, allowNoRole: true)) { return Forbid(); }
-#endif
-
         var project = _projectContext.Projects.SingleOrDefault(project => project.id == projectId);
         if (project is null)
             return NotFound();
@@ -48,10 +38,6 @@ public class BoardsController : ControllerBase
     [HttpGet("boards/{boardId}")]
     public ActionResult<BoardGet> GetBoard(ulong boardId)
     {
-#if AUTH
-        var token = TokenProvider.GetToken(Request);
-        if (!AuthenticationManager.Authorize(token, OrganizationId, allowNoRole: true)) { return Forbid(); }
-#endif
         var board = _boardContext.Boards
             .Where(board => board.id == boardId)
             .Include(x => x.Project)
@@ -68,11 +54,6 @@ public class BoardsController : ControllerBase
     [HttpDelete("boards/{boardId}")]
     public ActionResult DeleteBoards(ulong boardId)
     {
-#if AUTH
-        var token = TokenProvider.GetToken(Request);
-        if (!AuthenticationManager.Authorize(token, OrganizationId)) { return Forbid(); }
-#endif
-
         var boardToDelete = _boardContext.Boards
             .SingleOrDefault(board => board.id == boardId);
         
@@ -90,11 +71,6 @@ public class BoardsController : ControllerBase
     [HttpPost("projects/{projectId}/boards")]
     public ActionResult<BoardGet> CreateBoard(ulong projectId, BoardDto board)
     {
-#if AUTH
-        var token = TokenProvider.GetToken(Request);
-        if (!AuthenticationManager.Authorize(token, OrganizationId)) { return Forbid(); }
-#endif
-
         var project = _projectContext.Projects
             .SingleOrDefault(project => project.id == projectId);
         if (project is null)
@@ -117,11 +93,6 @@ public class BoardsController : ControllerBase
     [HttpPatch("boards/{boardId}")]
     public ActionResult<BoardGet> PatchBoard(ulong boardId, [FromBody] JsonPatchDocument<Board> patch)
     {
-#if AUTH
-        var token = TokenProvider.GetToken(Request);
-        if (!AuthenticationManager.Authorize(token, OrganizationId)) { return Forbid(); }
-#endif
-        
         var boardToPatch = _boardContext.Boards.SingleOrDefault(board => board.id == boardId);
         if (boardToPatch is null)
             return NotFound();

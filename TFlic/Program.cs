@@ -26,7 +26,7 @@ app.UseHttpsRedirection();
 UseAuthentication();
 app.UseAuthorization();
 
-app.MapControllers();
+MapControllers();
 
 app.Run();
 
@@ -38,7 +38,6 @@ void ConfigureServices()
     builderServices.AddSingleton<IRefreshTokenService, RefreshTokenService>();
 
     ConfigureDbContexts();
-
     builderServices.AddControllers().AddNewtonsoftJson();
     
     
@@ -155,4 +154,13 @@ void UseSwaggerGen()
         app.UseSwagger();
         app.UseSwaggerUI();
     }
+}
+
+void MapControllers()
+{
+    var conventionBuilder = app.MapControllers();
+    
+#if !AUTH
+    conventionBuilder.AllowAnonymous();
+#endif
 }

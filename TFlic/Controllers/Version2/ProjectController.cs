@@ -1,20 +1,14 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using TFlic.Controllers.Version2.DTO.GET;
 using TFlic.Controllers.Version2.DTO.POST;
-using TFlic.Controllers.Version2.Service;
 using TFlic.Models.Contexts;
 using TFlic.Models.Organization.Project;
 
 namespace TFlic.Controllers.Version2;
 
-#if AUTH
-using Models.Authentication;
-using Microsoft.AspNetCore.Authorization;
 [Authorize]
-#endif
 [ApiController]
 [Route("api/v2")]
 public class ProjectController : ControllerBase
@@ -29,10 +23,6 @@ public class ProjectController : ControllerBase
     [HttpGet("organizations/{organizationId}/projects")]
     public ActionResult<IEnumerable<ProjectGet>> GetProjects(ulong organizationId)
     {
-#if AUTH
-        var token = TokenProvider.GetToken(Request);
-        if (!AuthenticationManager.Authorize(token, OrganizationId, allowNoRole: true)) { return Forbid(); }
-#endif
         var organization = _organizationContext.Organizations
             .SingleOrDefault(org => org.Id == organizationId);
         if (organization is null)
@@ -48,11 +38,6 @@ public class ProjectController : ControllerBase
     [HttpGet("projects/{projectId}")]
     public ActionResult<ProjectGet> GetProject(ulong projectId)
     {
-#if AUTH
-        var token = TokenProvider.GetToken(Request);
-        if (!AuthenticationManager.Authorize(token, OrganizationId, allowNoRole: true)) { return Forbid(); }
-#endif
-
         var project = _projectContext.Projects.SingleOrDefault(project => project.id == projectId);
         return project is not null
             ? new ProjectGet(project)
@@ -65,11 +50,6 @@ public class ProjectController : ControllerBase
     [HttpDelete("projects/{projectId}")]
     public ActionResult DeleteProjects(ulong projectId)
     {
-#if AUTH
-        var token = TokenProvider.GetToken(Request);
-        if (!AuthenticationManager.Authorize(token, OrganizationId)) { return Forbid(); }
-#endif
-
         var projectToDelete = _projectContext.Projects.SingleOrDefault(project => project.id == projectId);
         if (projectToDelete is null)
             return NotFound();
@@ -85,11 +65,6 @@ public class ProjectController : ControllerBase
     [HttpPost("organizations/{organizationId}/projects")]
     public ActionResult<ProjectGet> CreateProject(ulong organizationId, ProjectDto project)
     {
-#if AUTH
-        var token = TokenProvider.GetToken(Request);
-        if (!AuthenticationManager.Authorize(token, OrganizationId)) { return Forbid(); }
-#endif
-
         var organization = _organizationContext.Organizations
             .SingleOrDefault(org => org.Id == organizationId);
         if (organization is null)
@@ -111,11 +86,6 @@ public class ProjectController : ControllerBase
     [HttpPatch("projects/{projectId}")]
     public ActionResult<ProjectGet> PatchProject(ulong projectId, [FromBody] JsonPatchDocument<Project> patch)
     {
-#if AUTH
-        var token = TokenProvider.GetToken(Request);
-        if (!AuthenticationManager.Authorize(token, OrganizationId)) { return Forbid(); }
-#endif
-
         var projectToPatch = _projectContext.Projects.SingleOrDefault(project => project.id == projectId);
         if (projectToPatch is null)
             return NotFound();

@@ -1,4 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -10,10 +10,7 @@ using AccountDto = TFlic.Controllers.Version2.DTO.AccountDto;
 namespace TFlic.Controllers.Version2;
 
 // todo документирование кодов возврата
-#if AUTH
-using Microsoft.AspNetCore.Authorization;
 [Authorize]
-#endif
 [ApiController]
 [Route("api/v2/accounts")]
 public class AccountsController : ControllerBase

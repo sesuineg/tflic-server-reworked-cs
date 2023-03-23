@@ -1,20 +1,14 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using TFlic.Controllers.Version2.DTO.GET;
 using TFlic.Controllers.Version2.DTO.POST;
-using TFlic.Controllers.Version2.Service;
 using TFlic.Models.Contexts;
 using TFlic.Models.Organization.Project;
 
 namespace TFlic.Controllers.Version2;
 
-#if AUTH
-using Models.Authentication;
-using Microsoft.AspNetCore.Authorization;
 [Authorize]
-#endif
 [ApiController]
 [Route("api/v2")]
 public class ColumnsController : ControllerBase
@@ -30,12 +24,6 @@ public class ColumnsController : ControllerBase
     [HttpGet("boards/{boardId}/columns")]
     public ActionResult<IEnumerable<ColumnGet>> GetColumns(ulong boardId)
     {
-// todo удалить секции AUTH
-#if AUTH
-        var token = TokenProvider.GetToken(Request);
-        if (!AuthenticationManager.Authorize(token, OrganizationId, allowNoRole: true)) { return Forbid(); }
-#endif
-
         // todo вынести _boardContext.Boards в отдельную переменную _boards 
         var board = _boardContext.Boards.SingleOrDefault(board => board.id == boardId);
         if (board is null)
@@ -51,11 +39,6 @@ public class ColumnsController : ControllerBase
     [HttpGet("columns/{columnId}")]
     public ActionResult<ColumnGet> GetColumn(ulong columnId)
     {
-#if AUTH
-        var token = TokenProvider.GetToken(Request);
-        if (!AuthenticationManager.Authorize(token, OrganizationId, allowNoRole: true)) { return Forbid(); }
-#endif
-
         var column = _columnContext.Columns
             .SingleOrDefault(column => column.Id == columnId);
             
@@ -69,11 +52,6 @@ public class ColumnsController : ControllerBase
     [HttpDelete("columns/{columnId}")]
     public ActionResult DeleteColumn(ulong columnId)
     {
-#if AUTH
-        var token = TokenProvider.GetToken(Request);
-        if (!AuthenticationManager.Authorize(token, OrganizationId)) { return Forbid(); }
-#endif
-
         var columnToDelete = _columnContext.Columns
             .SingleOrDefault(column => column.Id == columnId);
 
@@ -91,11 +69,6 @@ public class ColumnsController : ControllerBase
     [HttpPost("boards/{boardId}/columns")]
     public ActionResult<ColumnGet> CreateColumn(ulong boardId, ColumnDto column)
     {
-#if AUTH
-        var token = TokenProvider.GetToken(Request);
-        if (!AuthenticationManager.Authorize(token, OrganizationId)) { return Forbid(); }
-#endif
-
         var board = _boardContext.Boards.SingleOrDefault(board => board.id == boardId);
         if (board is null)
             return NotFound();
@@ -116,14 +89,8 @@ public class ColumnsController : ControllerBase
     
     #region PATCH
     [HttpPatch("columns/{columnId}")]
-    public ActionResult<ColumnGet> PatchColumn(ulong columnId,
-        [FromBody] JsonPatchDocument<Column> patch)
+    public ActionResult<ColumnGet> PatchColumn(ulong columnId, [FromBody] JsonPatchDocument<Column> patch)
     {
-#if AUTH
-        var token = TokenProvider.GetToken(Request);
-        if (!AuthenticationManager.Authorize(token, OrganizationId)) { return Forbid(); }
-#endif
-
         var columnToPatch = _columnContext.Columns.SingleOrDefault(column => column.Id == columnId);
         if (columnToPatch is null)
             return NotFound();

@@ -1,6 +1,6 @@
-﻿using Microsoft.AspNetCore.JsonPatch;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using TFlic.Controllers.Version2.DTO.GET;
 using TFlic.Controllers.Version2.DTO.POST;
 using TFlic.Models.Contexts;
@@ -8,11 +8,7 @@ using ModelTask = TFlic.Models.Organization.Project.Task;
 
 namespace TFlic.Controllers.Version2;
 
-#if AUTH
-using Models.Authentication;
-using Microsoft.AspNetCore.Authorization;
 [Authorize]
-#endif
 [ApiController]
 [Route("api/v2")]
 public class TaskController : ControllerBase
@@ -28,11 +24,6 @@ public class TaskController : ControllerBase
     [HttpGet("columns/{columnId}/tasks")]
     public ActionResult<IEnumerable<TaskGet>> GetTasks(ulong columnId)
     {
-#if AUTH
-        var token = TokenProvider.GetToken(Request);
-        if (!AuthenticationManager.Authorize(token, OrganizationId, allowNoRole: true)) { return Forbid(); }
-#endif
-
         var column = _columnContext.Columns.SingleOrDefault(column => column.Id == columnId);
         if (column is null)
             return NotFound();
@@ -47,11 +38,6 @@ public class TaskController : ControllerBase
     [HttpGet("tasks/{taskId}")]
     public ActionResult<TaskGet> GetTask(ulong taskId)
     {
-#if AUTH
-        var token = TokenProvider.GetToken(Request);
-        if (!AuthenticationManager.Authorize(token, OrganizationId, allowNoRole: true)) { return Forbid(); }
-#endif
-
         var task = _taskContext.Tasks.SingleOrDefault(task => task.Id == taskId);
 
         return task is not null
@@ -64,11 +50,6 @@ public class TaskController : ControllerBase
     [HttpDelete("tasks/{taskId}")]
     public ActionResult DeleteTask(ulong taskId)
     {
-#if AUTH
-        var token = TokenProvider.GetToken(Request);
-        if (!AuthenticationManager.Authorize(token, OrganizationId)) { return Forbid(); }
-#endif
-
         var taskToDelete = _taskContext.Tasks.SingleOrDefault(task => task.Id == taskId);
         if (taskToDelete is null)
             return NotFound();
@@ -86,11 +67,6 @@ public class TaskController : ControllerBase
     public ActionResult<TaskGet> CreateTask(ulong columnId,
         TaskDto taskDto)
     {
-#if AUTH
-        var token = TokenProvider.GetToken(Request);
-        if (!AuthenticationManager.Authorize(token, OrganizationId)) { return Forbid(); }
-#endif
-
         var column = _columnContext.Columns.SingleOrDefault(column => column.Id == columnId);
         if (column is null)
             return NotFound();
@@ -120,11 +96,6 @@ public class TaskController : ControllerBase
     public ActionResult<TaskGet> PatchTask(ulong taskId,
         [FromBody] JsonPatchDocument<ModelTask> patch)
     {
-#if AUTH
-        var token = TokenProvider.GetToken(Request);
-        if (!AuthenticationManager.Authorize(token, OrganizationId)) { return Forbid(); }
-#endif
-        
         var taskToPatch = _taskContext.Tasks.SingleOrDefault(task => task.Id == taskId);
         if (taskToPatch is null)
             return NotFound();
