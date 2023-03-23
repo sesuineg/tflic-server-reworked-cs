@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using TFlic;
@@ -11,10 +12,7 @@ var builder = WebApplication.CreateBuilder(args);
 var buildConfiguration = builder.Configuration;
 var builderServices = builder.Services;
 
-AddTransients();
-
-builderServices.AddControllers().AddNewtonsoftJson();
-
+ConfigureServices();
 ConfigureDatabase();
 ConfigureSwaggerGen();
 ConfigureJwtOptions();
@@ -34,12 +32,44 @@ app.Run();
 
 
 
-void AddTransients()
+void ConfigureServices()
 {
-    builderServices.AddTransient<IAccessTokenService, JwtService>();
-    builderServices.AddTransient<IRefreshTokenService, RefreshTokenService>();
+    builderServices.AddSingleton<IAccessTokenService, JwtService>();
+    builderServices.AddSingleton<IRefreshTokenService, RefreshTokenService>();
+
+    ConfigureDbContexts();
+
+    builderServices.AddControllers().AddNewtonsoftJson();
+    
+    
+    
+    void ConfigureDbContexts()
+    {
+        var dbConnectionString = GetDbConnectionString();
+        builderServices.AddDbContext<AccountContext>(options => options.UseNpgsql(dbConnectionString));
+        builderServices.AddDbContext<AuthInfoContext>(options => options.UseNpgsql(dbConnectionString));
+        builderServices.AddDbContext<BoardContext>(options => options.UseNpgsql(dbConnectionString));
+        builderServices.AddDbContext<ColumnContext>(options => options.UseNpgsql(dbConnectionString));
+        builderServices.AddDbContext<ComponentContext>(options => options.UseNpgsql(dbConnectionString));
+        builderServices.AddDbContext<OrganizationContext>(options => options.UseNpgsql(dbConnectionString));
+        builderServices.AddDbContext<ProjectContext>(options => options.UseNpgsql(dbConnectionString));
+        builderServices.AddDbContext<TaskContext>(options => options.UseNpgsql(dbConnectionString));
+        builderServices.AddDbContext<UserGroupContext>(options => options.UseNpgsql(dbConnectionString));
+
+
+
+        string GetDbConnectionString()
+        {
+            var connectionString = buildConfiguration.GetConnectionString("DbConnectionString");
+            if (connectionString is null)
+                throw new NullReferenceException("Database is not configured for this app");
+
+            return connectionString;
+        }
+    }
 }
 
+[Obsolete]
 void ConfigureDatabase()
 {
     // Add DbContexts to static aggregator

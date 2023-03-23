@@ -17,11 +17,9 @@ using Microsoft.AspNetCore.Authorization;
 [Route("api/v2/organizations/{organizationId}/projects/{projectId}/boards/{boardId}/columns/{columnId}")]
 public class TaskController : ControllerBase
 {
-    private readonly ILogger<TaskController> _logger;
-
-    public TaskController(ILogger<TaskController> logger)
+    public TaskController(TaskContext taskContext)
     {
-        _logger = logger;
+        _taskContext = taskContext;
     }
 
     #region GET
@@ -34,8 +32,8 @@ public class TaskController : ControllerBase
 #endif
         if (!PathChecker.IsTaskPathCorrect(organizationId, projectId, boardId, columnId))
             return NotFound();
-        using var ctx = DbContexts.Get<TaskContext>();
-        var cmp = ContextIncluder.GetTask(ctx)
+
+        var cmp = ContextIncluder.GetTask(_taskContext)
             //.Include(x => x.Components)
             .Where(x => x.ColumnId == columnId)
             .Select(x => new TaskGet(x))
@@ -52,8 +50,8 @@ public class TaskController : ControllerBase
 #endif
         if (!PathChecker.IsTaskPathCorrect(organizationId, projectId, boardId, columnId))
             return NotFound();
-        using var ctx = DbContexts.Get<TaskContext>();
-        var cmp = ContextIncluder.GetTask(ctx)
+
+        var cmp = ContextIncluder.GetTask(_taskContext)
             //.Include(x => x.Components)
             .Where(x => x.ColumnId == columnId && x.Id == taskId)
             .Select(x => new TaskGet(x))
@@ -72,11 +70,11 @@ public class TaskController : ControllerBase
 #endif
         if (!PathChecker.IsTaskPathCorrect(organizationId, projectId, boardId, columnId))
             return NotFound();
-        using var ctx = DbContexts.Get<TaskContext>();
-        var cmp = ContextIncluder.DeleteTask(ctx)
+
+        var cmp = ContextIncluder.DeleteTask(_taskContext)
             .Where(x => x.Id == taskId && x.ColumnId == columnId);
-        ctx.Tasks.RemoveRange(cmp);
-        ctx.SaveChanges();
+        _taskContext.Tasks.RemoveRange(cmp);
+        _taskContext.SaveChanges();
         return Ok();
     }
     
@@ -94,7 +92,6 @@ public class TaskController : ControllerBase
         if (!PathChecker.IsTaskPathCorrect(organizationId, projectId, boardId, columnId))
             return NotFound();
         
-        using var ctx = DbContexts.Get<TaskContext>();
         var obj = new Models.Organization.Project.Task()
         {
             
@@ -108,10 +105,9 @@ public class TaskController : ControllerBase
             Deadline = taskDto.Deadline,
             priority = taskDto.Priority,
             EstimatedTime = taskDto.EstimatedTime
-            
         };
-        ctx.Tasks.Add(obj);
-        ctx.SaveChanges();
+        _taskContext.Tasks.Add(obj);
+        _taskContext.SaveChanges();
         return Ok(new TaskGet(obj));
     }
     #endregion
@@ -127,13 +123,17 @@ public class TaskController : ControllerBase
 #endif
         if (!PathChecker.IsTaskPathCorrect(organizationId, projectId, boardId, columnId))
             return NotFound();
-        using var ctx = DbContexts.Get<TaskContext>();
-        var obj = ContextIncluder.GetTask(ctx)
+
+        var obj = ContextIncluder.GetTask(_taskContext)
             .Where(x => x.Id == taskId && x.ColumnId == columnId).ToList();
         patch.ApplyTo(obj.Single());
-        ctx.SaveChanges();
+        _taskContext.SaveChanges();
         
         return Ok(new TaskGet(obj.Single()));
     }
     #endregion
+    
+    
+    
+    private readonly TaskContext _taskContext;
 }

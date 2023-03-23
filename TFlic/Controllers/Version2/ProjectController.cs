@@ -19,11 +19,9 @@ using Microsoft.AspNetCore.Authorization;
 [Route("api/v2/organizations/{organizationId}")]
 public class ProjectController : ControllerBase
 {
-    private readonly ILogger<ProjectController> _logger;
-
-    public ProjectController(ILogger<ProjectController> logger)
+    public ProjectController(ProjectContext projectContext)
     {
-        _logger = logger;
+        _projectContext = projectContext;
     }
 
     #region GET
@@ -37,8 +35,8 @@ public class ProjectController : ControllerBase
 #endif
         if (!PathChecker.IsProjectPathCorrect(organizationId))
                     return NotFound();
-        using var ctx = DbContexts.Get<ProjectContext>();
-        var cmp = ContextIncluder.GetProject(ctx)
+
+        var cmp = ContextIncluder.GetProject(_projectContext)
             .Include(x => x.boards)
             .Where(x => x.OrganizationId == organizationId)
             .Select(x => new ProjectGet(x))
@@ -55,8 +53,8 @@ public class ProjectController : ControllerBase
 #endif
         if (!PathChecker.IsProjectPathCorrect(organizationId))
             return NotFound();
-        using var ctx = DbContexts.Get<ProjectContext>();
-        var cmp = ContextIncluder.GetProject(ctx)
+
+        var cmp = ContextIncluder.GetProject(_projectContext)
             .Where(x => x.OrganizationId == organizationId && x.id == projectId)
             .Include(x => x.boards)
             .Select(x => new ProjectGet(x))
@@ -76,10 +74,10 @@ public class ProjectController : ControllerBase
 #endif
         if (!PathChecker.IsProjectPathCorrect(organizationId))
             return NotFound();
-        using var ctx = DbContexts.Get<ProjectContext>();
-        var cmp = ContextIncluder.DeleteProject(ctx).Where(x => x.id == projectId && x.OrganizationId == organizationId);
-        ctx.Projects.RemoveRange(cmp);
-        ctx.SaveChanges();
+
+        var cmp = ContextIncluder.DeleteProject(_projectContext).Where(x => x.id == projectId && x.OrganizationId == organizationId);
+        _projectContext.Projects.RemoveRange(cmp);
+        _projectContext.SaveChanges();
         return Ok();
     }
     #endregion
@@ -95,14 +93,13 @@ public class ProjectController : ControllerBase
         if (!PathChecker.IsProjectPathCorrect(organizationId))
             return NotFound();
         
-        using var ctx = DbContexts.Get<ProjectContext>();
         var obj = new Project
         {
             name = project.Name,
             OrganizationId = organizationId
         };
-        ctx.Projects.Add(obj);
-        ctx.SaveChanges();
+        _projectContext.Projects.Add(obj);
+        _projectContext.SaveChanges();
         return Ok(new ProjectGet(obj));
     }
     #endregion
@@ -117,15 +114,19 @@ public class ProjectController : ControllerBase
 #endif
         if (!PathChecker.IsProjectPathCorrect(organizationId))
             return NotFound();
-        using var ctx = DbContexts.Get<ProjectContext>();
-        var obj = ContextIncluder.GetProject(ctx)
+
+        var obj = ContextIncluder.GetProject(_projectContext)
             .Include(x => x.boards)
             .Where(x => x.id == projectId && x.OrganizationId == organizationId)
             .ToList();
         patch.ApplyTo(obj.Single());
-        ctx.SaveChanges();
+        _projectContext.SaveChanges();
         
         return Ok(new ProjectGet(obj.Single()));
     }
     #endregion
+    
+    
+    
+    private readonly ProjectContext _projectContext;
 }

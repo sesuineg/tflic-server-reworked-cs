@@ -19,11 +19,9 @@ using Microsoft.AspNetCore.Authorization;
 [Route("api/v2/organizations/{organizationId}/projects/{projectId}/boards/{boardId}")]
 public class ColumnController : ControllerBase
 {
-    private readonly ILogger<ColumnController> _logger;
-
-    public ColumnController(ILogger<ColumnController> logger)
+    public ColumnController(ColumnContext columnContext)
     {
-        _logger = logger;
+        _columnContext = columnContext;
     }
 
     #region GET
@@ -36,8 +34,8 @@ public class ColumnController : ControllerBase
 #endif
         if (!PathChecker.IsColumnPathCorrect(organizationId, projectId, boardId))
             return NotFound();
-        using var ctx = DbContexts.Get<ColumnContext>();
-        var cmp = ContextIncluder.GetColumn(ctx)
+
+        var cmp = ContextIncluder.GetColumn(_columnContext)
             .Include(x => x.Tasks)
             .Where(x => x.BoardId == boardId)
             .Select(x => new ColumnGet(x))
@@ -54,8 +52,8 @@ public class ColumnController : ControllerBase
 #endif
         if (!PathChecker.IsColumnPathCorrect(organizationId, projectId, boardId))
             return NotFound();
-        using var ctx = DbContexts.Get<ColumnContext>();
-        var cmp = ContextIncluder.GetColumn(ctx)
+
+        var cmp = ContextIncluder.GetColumn(_columnContext)
             .Include(x => x.Tasks)
             .Where(x => x.BoardId == boardId && x.Id == columnId)
             .Select(x => new ColumnGet(x))
@@ -74,10 +72,10 @@ public class ColumnController : ControllerBase
 #endif
         if (!PathChecker.IsColumnPathCorrect(organizationId, projectId, boardId))
             return NotFound();
-        using var ctx = DbContexts.Get<ColumnContext>();
-        var cmp = ContextIncluder.DeleteColumn(ctx).Where(x => x.Id == columnId && x.BoardId == boardId);
-        ctx.Columns.RemoveRange(cmp);
-        ctx.SaveChanges();
+
+        var cmp = ContextIncluder.DeleteColumn(_columnContext).Where(x => x.Id == columnId && x.BoardId == boardId);
+        _columnContext.Columns.RemoveRange(cmp);
+        _columnContext.SaveChanges();
         return Ok();
     }
     #endregion
@@ -93,7 +91,6 @@ public class ColumnController : ControllerBase
         if (!PathChecker.IsColumnPathCorrect(organizationId, projectId, boardId))
             return NotFound();
         
-        using var ctx = DbContexts.Get<ColumnContext>();
         var obj = new Column()
         {
             
@@ -102,8 +99,8 @@ public class ColumnController : ControllerBase
             LimitOfTask = column.LimitOfTask,
             BoardId = boardId
         };
-        ctx.Columns.Add(obj);
-        ctx.SaveChanges();
+        _columnContext.Columns.Add(obj);
+        _columnContext.SaveChanges();
         return Ok(new ColumnGet(obj));
     }
     #endregion
@@ -119,12 +116,16 @@ public class ColumnController : ControllerBase
 #endif
         if (!PathChecker.IsColumnPathCorrect(organizationId, projectId, boardId))
             return NotFound();
-        using var ctx = DbContexts.Get<ColumnContext>();
-        var obj = ContextIncluder.GetColumn(ctx).Where(x => x.Id == columnId && x.BoardId == boardId).ToList();
+
+        var obj = ContextIncluder.GetColumn(_columnContext).Where(x => x.Id == columnId && x.BoardId == boardId).ToList();
         patch.ApplyTo(obj.Single());
-        ctx.SaveChanges();
+        _columnContext.SaveChanges();
         
         return Ok(new ColumnGet(obj.Single()));
     }
     #endregion
+
+
+
+    private readonly ColumnContext _columnContext;
 }

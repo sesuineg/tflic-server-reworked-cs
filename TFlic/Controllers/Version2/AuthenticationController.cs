@@ -1,12 +1,12 @@
-﻿using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
+﻿using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Text;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TFlic.Controllers.Version2.DTO;
 using TFlic.Models.Authentication;
 using TFlic.Models.Contexts;
 using TFlic.Services;
-using AccountDto = TFlic.Controllers.Version2.DTO.AccountDto;
 using AuthorizeRequestDto = TFlic.Controllers.Version2.DTO.AuthorizeRequestDto;
 using AuthorizeResponseDto = TFlic.Controllers.Version2.DTO.AuthorizeResponseDto;
 
@@ -19,9 +19,13 @@ using ModelAccount = Models.Organization.Accounts.Account;
 public class AuthenticationController : ControllerBase
 {
     public AuthenticationController(
-        IAccessTokenService accessTokenService, 
-        IRefreshTokenService refreshTokenService) 
+        AccountContext accountContext,
+        AuthInfoContext authInfoContext, 
+        IAccessTokenService accessTokenService,
+        IRefreshTokenService refreshTokenService)
     {
+        _accountContext = accountContext;
+        _authInfoContext = authInfoContext;
         _accessTokenService = accessTokenService;
         _refreshTokenService = refreshTokenService;
     }
@@ -30,15 +34,10 @@ public class AuthenticationController : ControllerBase
     /// Аутентификация и авторизация пользователя
     /// </summary>
     [HttpPost("authorize")]
-    public ActionResult<DTO.AuthorizeResponseDto>Authorize(DTO.AuthorizeRequestDto authorizeRequest)
+    public ActionResult<AuthorizeResponseDto>Authorize(AuthorizeRequestDto authorizeRequest)
     {
-        using var authInfoContext = DbContexts.Get<AuthInfoContext>();
-        
-        var authInfo = authInfoContext.Info.Where(
-                info => info.Login == authorizeRequest.Login &&
-                        info.PasswordHash == authorizeRequest.PasswordHash
-            ).Include(info => info.Account)
-            .SingleOrDefault();
+        var passwordHash = HashPassword(authorizeRequest.Password);
+        var authInfo = FindAccountsAuthInfo();
         if (authInfo is null) { return NotFound(); }
         
         authInfo.Account.UserGroups = authInfo.Account.GetUserGroups();
@@ -48,12 +47,22 @@ public class AuthenticationController : ControllerBase
         // сохраняем сгенерированный refreshToken в базу данных 
         authInfo.RefreshToken = refreshToken; 
         authInfo.RefreshTokenExpirationTime = refreshTokenExpirationTime; 
-        authInfoContext.SaveChanges();
+        _authInfoContext.SaveChanges();
         
-        return Ok(new DTO.AuthorizeResponseDto(
-            new DTO.AccountDto(authInfo.Account),
+        return Ok(new AuthorizeResponseDto(
+            new AccountDto(authInfo.Account),
             new TokenPairDto(accessToken, refreshToken)
         ));
+
+
+
+        AuthInfo? FindAccountsAuthInfo() =>
+            _authInfoContext.Info.Where(
+                    info => info.Login == authorizeRequest.Login &&
+                            info.PasswordHash == passwordHash
+                ).Include(info => info.Account)
+                .SingleOrDefault();
+        
     }
     
     /// <summary>
@@ -62,15 +71,12 @@ public class AuthenticationController : ControllerBase
     [HttpPost("refresh")]
     public ActionResult<TokenPairDto> Refresh(TokenPairDto request) 
     {
-        using var accountContext = DbContexts.Get<AccountContext>();
-        using var authInfoContext = DbContexts.Get<AuthInfoContext>();
-
         var account = _accessTokenService.GetPrincipalFromToken(request.AccessToken); // todo invalid principal check
         var sidClaim = account.Claims.FirstOrDefault(claim => claim.Type == ClaimTypes.Sid);
         if (sidClaim is null) return NotFound();
 
         var accountId = ulong.Parse(sidClaim.Value);
-        var authInfo = authInfoContext.Info
+        var authInfo = _authInfoContext.Info
             .SingleOrDefault(info => info.AccountId == accountId);
         if (authInfo is null) { return NotFound(); }
 
@@ -81,7 +87,7 @@ public class AuthenticationController : ControllerBase
 
         authInfo.RefreshToken = refreshToken;
         authInfo.RefreshTokenExpirationTime = refreshTokenExpirationTime;
-        authInfoContext.SaveChanges();
+        _authInfoContext.SaveChanges();
         
         return Ok(new TokenPairDto(accessToken, refreshToken));
     }
@@ -90,42 +96,63 @@ public class AuthenticationController : ControllerBase
     /// Регистрация пользователя в системе
     /// </summary>
     [HttpPost("register")]
-    public ActionResult<DTO.AuthorizeResponseDto> Register(RegisterAccountRequestDto account)
+    public ActionResult<AuthorizeResponseDto> Register(RegisterAccountDto account)
     {
-        using var authInfoContext = DbContexts.Get<AuthInfoContext>();
-        if (authInfoContext.Info.Any(info => info.Login == account.Login)) { return BadRequest("login already in use"); }
+        if (IsLoginInUse())  
+            return BadRequest("login already in use"); 
         
-        using var accountContext = DbContexts.Get<AccountContext>();
-        
-        var newAccount = new ModelAccount
-        {
-            Name = account.Name,
-            AuthInfo = new AuthInfo
-            {
-                Login = account.Login, 
-                PasswordHash = account.PasswordHash
-            }
-        };
-        newAccount = accountContext.Add(newAccount).Entity;
-        accountContext.SaveChanges();
+        var passwordHash = HashPassword(account.Password);
+        var newAccount = CreateNewAccount();
+        newAccount = _accountContext.Add(newAccount).Entity;
+        _accountContext.SaveChanges();
         
         var (accessToken, refreshToken, refreshTokenExpirationTime) = GenerateTokens(newAccount.Id);
 
         newAccount.AuthInfo.RefreshToken = refreshToken;
         newAccount.AuthInfo.RefreshTokenExpirationTime = refreshTokenExpirationTime;
-        accountContext.SaveChanges();
-        
-        return Ok(new DTO.AuthorizeResponseDto(
-            new DTO.AccountDto(newAccount), 
+        _accountContext.SaveChanges();
+
+        var responseDto = new AuthorizeResponseDto(
+            new AccountDto(newAccount),
             new TokenPairDto(accessToken, refreshToken)
-        ));
+        );
+        return Ok(responseDto);
+
+
+
+        bool IsLoginInUse() =>
+            _authInfoContext
+                .Info
+                .Any(info => info.Login == account.Login);
+
+        ModelAccount CreateNewAccount()
+        {
+            var newAuthInfo_ = new AuthInfo
+            {
+                Login = account.Login,
+                PasswordHash = passwordHash
+            };
+            
+            var newAccount_ = new ModelAccount
+            {
+                Name = account.Name,
+                AuthInfo = newAuthInfo_
+            };
+/*
+ * package Adeptik.Hosting.AspNet.Extensions contains bag, causes incorrect compilation error:
+ * "Action method should return ActionResult explicitly" when local function doesnt return ActionResult
+ */
+#pragma warning disable ADWC0004 
+            return newAccount_;
+#pragma warning restore ADWC0004
+        }
     }
 
+    
+    
     private (string accesToken, string refreshToken, DateTime refreshTokenExpirationTime) GenerateTokens(ulong ownerId)
     {
-        var accessTokenClaims = new List<Claim>{
-            CreateClaim(ClaimTypes.Sid, ownerId.ToString())
-        };
+        var accessTokenClaims = CreateAccessTokenClaims();
         var accessToken = _accessTokenService.Generate(accessTokenClaims);
         var (refreshToken, expirationTime) = _refreshTokenService.Generate();
 
@@ -133,12 +160,35 @@ public class AuthenticationController : ControllerBase
 
 
 
+        IEnumerable<Claim> CreateAccessTokenClaims() =>
+            new List<Claim>
+            {
+                CreateClaim(ClaimTypes.Sid, ownerId.ToString())
+            };
+        
         Claim CreateClaim(string type, string value) =>
             new Claim(type, value, ClaimValueTypes.String);
     }
-    
-    // private bool IsRefreshTokenValid(string token, )    
 
+    private static string HashPassword(string password)
+    {
+        var passwordBytes = GetPasswordBytes();
+        var passwordHash = SHA256.HashData(passwordBytes);
+
+        var serializedHash = SerializePasswordHash();
+        return serializedHash;
+
+
+
+        byte[] GetPasswordBytes() =>
+            Encoding.UTF8.GetBytes(password);
+
+        string SerializePasswordHash() =>
+            Convert.ToBase64String(passwordHash);
+    }
+
+    private readonly AccountContext _accountContext;
+    private readonly AuthInfoContext _authInfoContext;
     private readonly IAccessTokenService _accessTokenService;
     private readonly IRefreshTokenService _refreshTokenService;
 }

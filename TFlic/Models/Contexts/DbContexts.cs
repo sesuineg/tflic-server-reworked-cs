@@ -2,6 +2,7 @@
 
 namespace TFlic.Models.Contexts;
 
+[Obsolete("class replaced with dependency injection")]
 public static class DbContexts
 {
     /// <summary>

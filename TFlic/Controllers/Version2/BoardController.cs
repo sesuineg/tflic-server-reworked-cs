@@ -18,11 +18,9 @@ using Microsoft.AspNetCore.Authorization;
 [Route("api/v2/organizations/{organizationId}/projects/{projectId}")]
 public class BoardController : ControllerBase
 {
-    private readonly ILogger<BoardController> _logger;
-
-    public BoardController(ILogger<BoardController> logger)
+    public BoardController(BoardContext boardContext)
     {
-        _logger = logger;
+        _boardContext = boardContext;
     }
 
     #region GET
@@ -35,8 +33,8 @@ public class BoardController : ControllerBase
 #endif
         if (!PathChecker.IsBoardPathCorrect(organizationId, projectId))
             return NotFound();
-        using var ctx = DbContexts.Get<BoardContext>();
-        var cmp = ContextIncluder.GetBoard(ctx)
+
+        var cmp = ContextIncluder.GetBoard(_boardContext)
             .Include(x => x.Columns)
             .Where(x => x.ProjectId == projectId)
             .Select(x => new BoardGet(x))
@@ -53,8 +51,8 @@ public class BoardController : ControllerBase
 #endif
         if (!PathChecker.IsBoardPathCorrect(organizationId, projectId))
             return NotFound();
-        using var ctx = DbContexts.Get<BoardContext>();
-        var cmp = ContextIncluder.GetBoard(ctx)
+
+        var cmp = ContextIncluder.GetBoard(_boardContext)
             .Include(x => x.Columns)
             .Where(x => x.ProjectId == projectId && x.id == boardId)
             .Select(x => new BoardGet(x))
@@ -73,10 +71,10 @@ public class BoardController : ControllerBase
 #endif
         if (!PathChecker.IsBoardPathCorrect(organizationId, projectId))
             return NotFound();
-        using var ctx = DbContexts.Get<BoardContext>();
-        var cmp = ContextIncluder.DeleteBoard(ctx).Where(x => x.id == boardId && x.ProjectId == projectId);
-        ctx.Boards.RemoveRange(cmp);
-        ctx.SaveChanges();
+
+        var cmp = ContextIncluder.DeleteBoard(_boardContext).Where(x => x.id == boardId && x.ProjectId == projectId);
+        _boardContext.Boards.RemoveRange(cmp);
+        _boardContext.SaveChanges();
         return Ok();
     }
     #endregion
@@ -91,16 +89,15 @@ public class BoardController : ControllerBase
 #endif
         if (!PathChecker.IsBoardPathCorrect(organizationId, projectId))
             return NotFound();
-        
-        using var ctx = DbContexts.Get<BoardContext>();
+
         var obj = new Board
         {
             Name = board.Name,
             ProjectId = projectId
         };
         obj.Columns.Add(new Column{Position = 0, LimitOfTask = 0, Name = "backlog"});
-        ctx.Boards.Add(obj);
-        ctx.SaveChanges();
+        _boardContext.Boards.Add(obj);
+        _boardContext.SaveChanges();
         return Ok(new BoardGet(obj));
     }
 
@@ -116,12 +113,16 @@ public class BoardController : ControllerBase
 #endif
         if (!PathChecker.IsBoardPathCorrect(organizationId, projectId))
             return NotFound();
-        using var ctx = DbContexts.Get<BoardContext>();
-        var obj = ContextIncluder.GetBoard(ctx).Where(x => x.id == boardId && x.ProjectId == projectId).ToList();
+
+        var obj = ContextIncluder.GetBoard(_boardContext).Where(x => x.id == boardId && x.ProjectId == projectId).ToList();
         patch.ApplyTo(obj.Single());
-        ctx.SaveChanges();
+        _boardContext.SaveChanges();
         
         return Ok(new BoardGet(obj.Single()));
     }
     #endregion
+    
+    
+    
+    private readonly BoardContext _boardContext;
 }

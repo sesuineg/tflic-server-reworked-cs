@@ -24,16 +24,24 @@ using Microsoft.AspNetCore.Authorization;
 [Route("api/v2/organizations")]
 public class OrganizationController : ControllerBase
 {
+    public OrganizationController(
+        OrganizationContext organizationContext,
+        AccountContext accountContext,
+        AuthInfoContext authInfoContext)
+    {
+        _organizationContext = organizationContext;
+        _accountContext = accountContext;
+        _authInfoContext = authInfoContext;
+    }
+    
     /// <summary>
     /// Получение сведений об организации с указанным Id
     /// </summary>
     [HttpGet("{organizationId}")]
     public ActionResult<OrganizationDto> GetOrganization(ulong organizationId)
     {
-        using var orgContext = DbContexts.Get<OrganizationContext>();
-
         var organization = DbValueRetriever.Retrieve(
-            orgContext.Organizations.Include(org => org.Projects), 
+            _organizationContext.Organizations.Include(org => org.Projects), 
             organizationId, 
             nameof(ModelOrganization.Id)
         );
@@ -49,8 +57,7 @@ public class OrganizationController : ControllerBase
     [HttpPost]
     public ActionResult<OrganizationDto> RegisterOrganization([FromBody] RegisterOrganizationRequestDto registrationRequest)
     {
-        using var accountContext = DbContexts.Get<AccountContext>();
-        var creator = DbValueRetriever.Retrieve(accountContext.Accounts, registrationRequest.CreatorId, nameof(ModelAccount.Id));
+        var creator = DbValueRetriever.Retrieve(_accountContext.Accounts, registrationRequest.CreatorId, nameof(ModelAccount.Id));
         if (creator is null) { return BadRequest($"account with id = {registrationRequest.CreatorId} doesnt exist"); }
         
         var newOrganization = new ModelOrganization
@@ -59,10 +66,8 @@ public class OrganizationController : ControllerBase
             Description = registrationRequest.Description
         };
         
-        using var orgContext = DbContexts.Get<OrganizationContext>();
-
-        orgContext.Add(newOrganization);
-        orgContext.SaveChanges();
+        _organizationContext.Add(newOrganization);
+        _organizationContext.SaveChanges();
         /*
          * добавлять группы пользователей можно только после сохранения организации в бд,
          * так как до сохранения организация не имеет Id (его выдает база данных), вследствие
@@ -86,17 +91,15 @@ public class OrganizationController : ControllerBase
         if (!AuthenticationManager.Authorize(token, OrganizationId, adminRequired: true)) { return Forbid(); }
 #endif
         
-        using var orgContext = DbContexts.Get<OrganizationContext>();
-
         var organization = DbValueRetriever.Retrieve(
-            orgContext.Organizations.Include(org => org.Projects), 
+            _organizationContext.Organizations.Include(org => org.Projects), 
             organizationId, 
             nameof(ModelOrganization.Id)
         );
         if (organization is null) { return NotFound(); }
         
         patch.ApplyTo(organization);
-        orgContext.SaveChanges();
+        _organizationContext.SaveChanges();
         
         return Ok(new OrganizationDto(organization));
     }
@@ -105,22 +108,20 @@ public class OrganizationController : ControllerBase
     /// Получение списка участников организации
     /// </summary>
     [HttpGet("{organizationId}/members")]
-    public ActionResult<IEnumerable<DTO.AccountDto>> GetOrganizationMembers(ulong organizationId)
+    public ActionResult<IEnumerable<AccountDto>> GetOrganizationMembers(ulong organizationId)
     {
 #if AUTH
         var token = TokenProvider.GetToken(Request);
         if (!AuthenticationManager.Authorize(token, OrganizationId, allowNoRole: true)) { return Forbid(); }
 #endif
         
-        using var orgContext = DbContexts.Get<OrganizationContext>();
-
-        var organization = DbValueRetriever.Retrieve(orgContext.Organizations, organizationId, nameof(ModelOrganization.Id));
+        var organization = DbValueRetriever.Retrieve(_organizationContext.Organizations, organizationId, nameof(ModelOrganization.Id));
         if (organization is null) { return NotFound(); }
         
         var members = new List<ModelAccount>();
         foreach (var userGroup in organization.GetUserGroups()) { members.AddRange(userGroup.Accounts); }
 
-        var dtoMembers = members.Select(member => new DTO.AccountDto(member));
+        var dtoMembers = members.Select(member => new AccountDto(member));
         return Ok(dtoMembers);
     }
 
@@ -128,34 +129,31 @@ public class OrganizationController : ControllerBase
     /// Добавление пользователя в организацию
     /// </summary>
     [HttpPost("{organizationId}/members")]
-    public ActionResult<DTO.AccountDto> AddUserToOrganization(ulong organizationId, [FromBody] string login)
+    public ActionResult<AccountDto> AddUserToOrganization(ulong organizationId, [FromBody] string login)
     {
 #if AUTH
         var token = TokenProvider.GetToken(Request);
         if (!AuthenticationManager.Authorize(token, OrganizationId, adminRequired: true)) { return Forbid(); }
 #endif
 
-        using var authInfoContext = DbContexts.Get<AuthInfoContext>();
-        var authInfo = DbValueRetriever.Retrieve(authInfoContext.Info, login, nameof(AuthInfo.Login));
+        var authInfo = DbValueRetriever.Retrieve(_authInfoContext.Info, login, nameof(AuthInfo.Login));
 
         if (authInfo is null) { return NotFound(); }
         
-        using var accountContext = DbContexts.Get<AccountContext>();
         var account = DbValueRetriever.Retrieve(
-            accountContext.Accounts.Include(acc => acc.UserGroups), 
+            _accountContext.Accounts.Include(acc => acc.UserGroups), 
             authInfo.AccountId, 
             nameof(ModelAccount.Id)
         );
         if (account is null) { return NotFound(); }
         
-        using var orgContext = DbContexts.Get<OrganizationContext>();
-        var organization = DbValueRetriever.Retrieve(orgContext.Organizations, organizationId, nameof(ModelOrganization.Id));
+        var organization = DbValueRetriever.Retrieve(_organizationContext.Organizations, organizationId, nameof(ModelOrganization.Id));
         if (organization is null) { return NotFound(); }
 
         organization.AddAccount(account);
 
         account.AuthInfo = authInfo;
-        return Ok(new DTO.AccountDto(account));
+        return Ok(new AccountDto(account));
     }
 
     /// <summary>
@@ -168,10 +166,8 @@ public class OrganizationController : ControllerBase
         var token = TokenProvider.GetToken(Request);
         if (!AuthenticationManager.Authorize(token, OrganizationId, adminRequired: true)) { return Forbid(); }
 #endif
-        
-        using var orgContext = DbContexts.Get<OrganizationContext>();
-        
-        var organization = DbValueRetriever.Retrieve(orgContext.Organizations, organizationId, nameof(ModelOrganization.Id));
+
+        var organization = DbValueRetriever.Retrieve(_organizationContext.Organizations, organizationId, nameof(ModelOrganization.Id));
         if (organization is null) { return NotFound(); }
         
         var removed = organization.RemoveAccount(memberId);
@@ -192,9 +188,7 @@ public class OrganizationController : ControllerBase
         if (!AuthenticationManager.Authorize(token, OrganizationId, allowNoRole: true)) { return Forbid(); }
 #endif
         
-        using var orgContext = DbContexts.Get<OrganizationContext>();
-
-        var organization = DbValueRetriever.Retrieve(orgContext.Organizations, organizationId, nameof(ModelOrganization.Id));
+        var organization = DbValueRetriever.Retrieve(_organizationContext.Organizations, organizationId, nameof(ModelOrganization.Id));
         if (organization is null) { return NotFound(); }
         
         var dtoUserGroups = organization.GetUserGroups().Select(ug => new UserGroupDto(ug));
@@ -205,22 +199,20 @@ public class OrganizationController : ControllerBase
     /// Получение участников указанной группы пользователей в организации
     /// </summary>
     [HttpGet("{organizationId}/userGroups/{userGroupLocalId}/members")]
-    public ActionResult<IEnumerable<DTO.AccountDto>> GetUserGroupMembers(ulong organizationId, short userGroupLocalId)
+    public ActionResult<IEnumerable<AccountDto>> GetUserGroupMembers(ulong organizationId, short userGroupLocalId)
     {
 #if AUTH
         var token = TokenProvider.GetToken(Request);
         if (!AuthenticationManager.Authorize(token, OrganizationId, allowNoRole: true)) { return Forbid(); }
 #endif
         
-        using var orgContext = DbContexts.Get<OrganizationContext>();
-        
-        var organization = DbValueRetriever.Retrieve(orgContext.Organizations, organizationId, nameof(ModelOrganization.Id));
+        var organization = DbValueRetriever.Retrieve(_organizationContext.Organizations, organizationId, nameof(ModelOrganization.Id));
         if (organization is null) { return NotFound(); }
         
         var userGroup = DbValueRetriever.Retrieve(organization.GetUserGroups(), userGroupLocalId, nameof(ModelUserGroup.LocalId));
         if (userGroup is null) { return NotFound(); }
 
-        var accounts = userGroup.Accounts.Select(acc => new DTO.AccountDto(acc));
+        var accounts = userGroup.Accounts.Select(acc => new AccountDto(acc));
         return Ok(accounts);
     }
     
@@ -235,9 +227,7 @@ public class OrganizationController : ControllerBase
         if (!AuthenticationManager.Authorize(token, OrganizationId, adminRequired: true)) { return Forbid(); }
 #endif
         
-        using var orgContext = DbContexts.Get<OrganizationContext>();
-
-        var organization = DbValueRetriever.Retrieve(orgContext.Organizations, organizationId, nameof(ModelOrganization.Id));
+        var organization = DbValueRetriever.Retrieve(_organizationContext.Organizations, organizationId, nameof(ModelOrganization.Id));
         if (organization is null) { return NotFound(); }
         
         if (organization.Contains(memberId) is null)
@@ -265,12 +255,16 @@ public class OrganizationController : ControllerBase
         if (!AuthenticationManager.Authorize(token, OrganizationId, adminRequired: true)) { return Forbid(); }
 #endif
         
-        using var orgContext = DbContexts.Get<OrganizationContext>();
-
-        var organization = DbValueRetriever.Retrieve(orgContext.Organizations, organizationId, nameof(ModelOrganization.Id));
+        var organization = DbValueRetriever.Retrieve(_organizationContext.Organizations, organizationId, nameof(ModelOrganization.Id));
         if (organization is null) { return NotFound(); }
 
         organization.RemoveAccountFromGroup(memberId, userGroupLocalId);
         return Ok();
     }
+
+
+
+    private readonly OrganizationContext _organizationContext;
+    private readonly AccountContext _accountContext;
+    private readonly AuthInfoContext _authInfoContext;
 }

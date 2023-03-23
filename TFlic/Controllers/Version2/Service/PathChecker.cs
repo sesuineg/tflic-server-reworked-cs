@@ -4,6 +4,7 @@ using TFlic.Models.Organization.Project;
 namespace TFlic.Controllers.Version2.Service;
 
 // todo избавиться от PathChecker
+[Obsolete]
 public static class PathChecker
 {
 

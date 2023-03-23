@@ -18,14 +18,21 @@ using Microsoft.AspNetCore.Authorization;
 [Route("api/v2/accounts")]
 public class AccountController : ControllerBase
 {
+    public AccountController(
+        AccountContext accountContext,
+        AuthInfoContext authInfoContext)
+    {
+        _accountContext = accountContext;
+        _authInfoContext = authInfoContext;
+    }
+    
     /// <summary>
     /// Получение аккаунта с указанным Login
     /// </summary>
     [HttpGet("{accountLogin}")]
-    public ActionResult<DTO.AccountDto> GetAccountByLogin(string accountLogin)
+    public ActionResult<AccountDto> GetAccountByLogin(string accountLogin)
     {
-        using var authInfoContext = DbContexts.Get<AuthInfoContext>();
-        var account = authInfoContext.Info
+        var account = _authInfoContext.Info
             .Where(info => info.Login == accountLogin)
             .Include(info => info.Account)
             .Select(info => info.Account)
@@ -43,18 +50,16 @@ public class AccountController : ControllerBase
                 PasswordHash = string.Empty
             }
         };
-        return Ok(new DTO.AccountDto(foundAccount));
+        return Ok(new AccountDto(foundAccount));
     }
     
     /// <summary>
     /// Получение аккаунта с указанным Id
     /// </summary>
     [HttpGet("{accountId:long}")]
-    public ActionResult<DTO.AccountDto> GetAccountById(long accountId)
+    public ActionResult<AccountDto> GetAccountById(long accountId)
     {
-        using var accountContext = DbContexts.Get<AccountContext>();
-        
-        var account = accountContext.Accounts
+        var account = _accountContext.Accounts
             .Where(acc => acc.Id == (ulong) accountId)
             .Include(acc => acc.UserGroups)
             .Include(acc => acc.AuthInfo)
@@ -69,10 +74,9 @@ public class AccountController : ControllerBase
     /// Изменение данных аккаунта с указанным Id
     /// </summary>
     [HttpPatch("{accountId}")]
-    public ActionResult<DTO.AccountDto> PatchAccount(ulong accountId, [FromBody] JsonPatchDocument<Account> patch)
+    public ActionResult<AccountDto> PatchAccount(ulong accountId, [FromBody] JsonPatchDocument<Account> patch)
     {
-        using var accountContext = DbContexts.Get<AccountContext>();
-        var account = accountContext.Accounts
+        var account = _accountContext.Accounts
             .Where(acc => acc.Id == accountId)
             .Include(acc => acc.UserGroups)
             .Include(acc => acc.AuthInfo)
@@ -81,7 +85,7 @@ public class AccountController : ControllerBase
         
         
         patch.ApplyTo(account);
-        accountContext.SaveChanges(); 
+        _accountContext.SaveChanges(); 
 
         return Ok(new DTO.AccountDto(account)) ;
     }
@@ -92,12 +96,15 @@ public class AccountController : ControllerBase
     [HttpGet("{accountId}/Organizations")]
     public ActionResult<IEnumerable<ulong>> GetAccountsOrganizations(ulong accountId)
     {
-        using var accountContext = DbContexts.Get<AccountContext>();
-        
-        var account = accountContext.Accounts.SingleOrDefault(acc => acc.Id == accountId);
+        var account = _accountContext.Accounts.SingleOrDefault(acc => acc.Id == accountId);
         if (account is null) { return NotFound(); }
 
         var organizationIds = account.GetOrganizations().Select(org => org.Id);
         return Ok(organizationIds);
     }
+    
+    
+    
+    private readonly AccountContext _accountContext;
+    private readonly AuthInfoContext _authInfoContext;
 }

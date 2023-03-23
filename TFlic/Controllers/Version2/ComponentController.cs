@@ -19,11 +19,9 @@ using Microsoft.AspNetCore.Authorization;
 [Route("api/v2/organizations/{organizationId}/projects/{projectId}/boards/{boardId}/columns/{columnId}/tasks/{taskId}")]
 public class ComponentController : ControllerBase
 {
-    private readonly ILogger<ComponentController> _logger;
-
-    public ComponentController(ILogger<ComponentController> logger)
+    public ComponentController(ComponentContext componentContext)
     {
-        _logger = logger;
+        _componentContext = componentContext;
     }
 
     #region GET
@@ -36,8 +34,8 @@ public class ComponentController : ControllerBase
 #endif
         if (!PathChecker.IsComponentPathCorrect(organizationId, projectId, boardId, columnId, taskId))
             return NotFound();
-        using var ctx = DbContexts.Get<ComponentContext>();
-        var cmp = ContextIncluder.GetComponent(ctx)
+
+        var cmp = ContextIncluder.GetComponent(_componentContext)
             .Where(x => x.task_id == taskId)
             .Select(x => new ComponentGet(x))
             .ToList();
@@ -54,8 +52,8 @@ public class ComponentController : ControllerBase
 #endif
         if (!PathChecker.IsComponentPathCorrect(organizationId, projectId, boardId, columnId, taskId))
             return NotFound();
-        using var ctx = DbContexts.Get<ComponentContext>();
-        var cmp = ContextIncluder.GetComponent(ctx)
+
+        var cmp = ContextIncluder.GetComponent(_componentContext)
             .Where(x => x.task_id == taskId && x.id == componentId)
             .Select(x => new ComponentGet(x))
             .ToList();
@@ -74,10 +72,10 @@ public class ComponentController : ControllerBase
 #endif
         if (!PathChecker.IsComponentPathCorrect(organizationId, projectId, boardId, columnId, taskId))
             return NotFound();
-        using var componentCtx = DbContexts.Get<ComponentContext>();
-        var cmp = ContextIncluder.DeleteComponent(componentCtx).Where(x => x.id == componentId);
-        componentCtx.Components.RemoveRange(cmp);
-        componentCtx.SaveChanges();
+
+        var cmp = ContextIncluder.DeleteComponent(_componentContext).Where(x => x.id == componentId);
+        _componentContext.Components.RemoveRange(cmp);
+        _componentContext.SaveChanges();
         return Ok();
     }
     #endregion
@@ -94,7 +92,6 @@ public class ComponentController : ControllerBase
         if (!PathChecker.IsComponentPathCorrect(organizationId, projectId, boardId, columnId, taskId))
             return NotFound();
         
-        using var ctx = DbContexts.Get<ComponentContext>();
         var obj = new Models.Organization.Project.Component.ComponentDto()
         {
             name = componentDto.Name,
@@ -103,8 +100,8 @@ public class ComponentController : ControllerBase
             value = componentDto.Value,
             task_id = taskId
         };
-        ctx.Components.Add(obj);
-        ctx.SaveChanges();
+        _componentContext.Components.Add(obj);
+        _componentContext.SaveChanges();
         return Ok(new ComponentGet(obj));
     }
     #endregion
@@ -120,12 +117,16 @@ public class ComponentController : ControllerBase
 #endif
         if (!PathChecker.IsComponentPathCorrect(organizationId, projectId, boardId, columnId, taskId))
             return NotFound();
-        using var ctx = DbContexts.Get<ComponentContext>();
-        var obj = ContextIncluder.GetComponent(ctx).Where(x => x.id == componentId).ToList();
+
+        var obj = ContextIncluder.GetComponent(_componentContext).Where(x => x.id == componentId).ToList();
         patch.ApplyTo(obj.Single());
-        ctx.SaveChanges();
+        _componentContext.SaveChanges();
         
         return Ok(new ComponentGet(obj.Single()));
     }
     #endregion
+    
+    
+    
+    private readonly ComponentContext _componentContext;
 }
