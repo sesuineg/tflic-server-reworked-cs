@@ -15,8 +15,6 @@ public class TaskGet
         Deadline = task.Deadline;
         Priority = task.priority;
         EstimatedTime = task.EstimatedTime;
-        if (task.Components == null) return;
-        foreach (var component in task.Components) { Components.Add(component.id); }
     }
     
     public ulong Id { get; init; }
@@ -36,7 +34,4 @@ public class TaskGet
     public DateTime CreationTime { get; set; }
     public DateTime Deadline { get; set; }
     public string Status { get; set; }
-    //public ICollection<Tag> Tags { get; }
-
-    public List<ulong> Components { get; } = new();
 }

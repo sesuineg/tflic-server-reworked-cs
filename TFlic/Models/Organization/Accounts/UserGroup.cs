@@ -82,7 +82,7 @@ public class UserGroup
     /// Локальный идентификатор группы пользователей
     /// </summary>
     [Column("local_id")]
-    public required short LocalId { get; init; }
+    public required short LocalId { get; init; } // todo удалить локальный id
     
     /// <summary>
     /// Уникальный идентификатор организации, которая содержит текущую группу пользователей

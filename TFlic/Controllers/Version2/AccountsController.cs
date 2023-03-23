@@ -16,9 +16,9 @@ using Microsoft.AspNetCore.Authorization;
 #endif
 [ApiController]
 [Route("api/v2/accounts")]
-public class AccountController : ControllerBase
+public class AccountsController : ControllerBase
 {
-    public AccountController(
+    public AccountsController(
         AccountContext accountContext,
         AuthInfoContext authInfoContext)
     {
@@ -29,11 +29,11 @@ public class AccountController : ControllerBase
     /// <summary>
     /// Получение аккаунта с указанным Login
     /// </summary>
-    [HttpGet("{accountLogin}")]
-    public ActionResult<AccountDto> GetAccountByLogin(string accountLogin)
+    [HttpGet("{login}")]
+    public ActionResult<AccountDto> GetAccountByLogin(string login)
     {
         var account = _authInfoContext.Info
-            .Where(info => info.Login == accountLogin)
+            .Where(info => info.Login == login)
             .Include(info => info.Account)
             .Select(info => info.Account)
             .SingleOrDefault();
@@ -46,7 +46,7 @@ public class AccountController : ControllerBase
             UserGroups = account.GetUserGroups(),
             AuthInfo = new AuthInfo
             {
-                Login = accountLogin,
+                Login = login,
                 PasswordHash = string.Empty
             }
         };
@@ -66,7 +66,7 @@ public class AccountController : ControllerBase
             .SingleOrDefault();
 
         return account is not null
-            ? Ok(new DTO.AccountDto(account))
+            ? Ok(new AccountDto(account))
             : NotFound();
     }
 
@@ -87,13 +87,13 @@ public class AccountController : ControllerBase
         patch.ApplyTo(account);
         _accountContext.SaveChanges(); 
 
-        return Ok(new DTO.AccountDto(account)) ;
+        return Ok(new AccountDto(account)) ;
     }
 
     /// <summary>
     /// Получение списка организаций, в которых состоит указанный аккаунт
     /// </summary>
-    [HttpGet("{accountId}/Organizations")]
+    [HttpGet("{accountId}/organizations")]
     public ActionResult<IEnumerable<ulong>> GetAccountsOrganizations(ulong accountId)
     {
         var account = _accountContext.Accounts.SingleOrDefault(acc => acc.Id == accountId);

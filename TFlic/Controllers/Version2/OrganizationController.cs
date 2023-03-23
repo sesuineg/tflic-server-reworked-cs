@@ -21,7 +21,7 @@ using Microsoft.AspNetCore.Authorization;
 [Authorize]
 #endif
 [ApiController]
-[Route("api/v2/organizations")]
+[Route("api/v2")]
 public class OrganizationController : ControllerBase
 {
     public OrganizationController(
@@ -37,7 +37,7 @@ public class OrganizationController : ControllerBase
     /// <summary>
     /// Получение сведений об организации с указанным Id
     /// </summary>
-    [HttpGet("{organizationId}")]
+    [HttpGet("organizations/{organizationId}")]
     public ActionResult<OrganizationDto> GetOrganization(ulong organizationId)
     {
         var organization = DbValueRetriever.Retrieve(
@@ -52,18 +52,18 @@ public class OrganizationController : ControllerBase
     }
 
     /// <summary>
-    /// Регистрация организации в системе
+    /// Создание организации
     /// </summary>
-    [HttpPost]
-    public ActionResult<OrganizationDto> RegisterOrganization([FromBody] RegisterOrganizationRequestDto registrationRequest)
+    [HttpPost("organizations")]
+    public ActionResult<OrganizationDto> CreateOrganization([FromBody] NewOrganizationDto registration)
     {
-        var creator = DbValueRetriever.Retrieve(_accountContext.Accounts, registrationRequest.CreatorId, nameof(ModelAccount.Id));
-        if (creator is null) { return BadRequest($"account with id = {registrationRequest.CreatorId} doesnt exist"); }
+        var creator = DbValueRetriever.Retrieve(_accountContext.Accounts, registration.CreatorId, nameof(ModelAccount.Id));
+        if (creator is null) { return BadRequest($"account with id = {registration.CreatorId} doesnt exist"); }
         
         var newOrganization = new ModelOrganization
         {
-            Name = registrationRequest.Name,
-            Description = registrationRequest.Description
+            Name = registration.Name,
+            Description = registration.Description
         };
         
         _organizationContext.Add(newOrganization);
@@ -74,8 +74,8 @@ public class OrganizationController : ControllerBase
          * чего группам пользователей выдается некорректный LocalId 
          */
         newOrganization.CreateUserGroups();
-        newOrganization.AddAccount(registrationRequest.CreatorId);
-        newOrganization.AddAccountToGroup(registrationRequest.CreatorId, (short) ModelOrganization.PrimaryUserGroups.Admins);
+        newOrganization.AddAccount(registration.CreatorId);
+        newOrganization.AddAccountToGroup(registration.CreatorId, (short) ModelOrganization.PrimaryUserGroups.Admins);
 
         return Ok(new OrganizationDto(newOrganization));
     }
@@ -128,7 +128,8 @@ public class OrganizationController : ControllerBase
     /// <summary>
     /// Добавление пользователя в организацию
     /// </summary>
-    [HttpPost("{organizationId}/members")]
+    [HttpPost("organizations/{organizationId}/members")]
+    // todo заменить логин на id
     public ActionResult<AccountDto> AddUserToOrganization(ulong organizationId, [FromBody] string login)
     {
 #if AUTH
@@ -137,7 +138,6 @@ public class OrganizationController : ControllerBase
 #endif
 
         var authInfo = DbValueRetriever.Retrieve(_authInfoContext.Info, login, nameof(AuthInfo.Login));
-
         if (authInfo is null) { return NotFound(); }
         
         var account = DbValueRetriever.Retrieve(
@@ -159,7 +159,7 @@ public class OrganizationController : ControllerBase
     /// <summary>
     /// Удаление пользователя из организации
     /// </summary>
-    [HttpDelete("{organizationId}/members/{memberId}")]
+    [HttpDelete("organizations/{organizationId}/members/{memberId}")]
     public ActionResult DeleteOrganizationsMember(ulong organizationId, ulong memberId)
     {
 #if AUTH

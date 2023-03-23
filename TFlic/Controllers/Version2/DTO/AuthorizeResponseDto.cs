@@ -1,13 +1,3 @@
 ﻿namespace TFlic.Controllers.Version2.DTO;
 
-public record AuthorizeResponseDto
-{
-    public AuthorizeResponseDto(AccountDto accountDto, TokenPairDto tokens)
-    {
-        AccountDto = accountDto;
-        Tokens = tokens;
-    }
-
-    public AccountDto AccountDto { get; }
-    public TokenPairDto Tokens { get; }
-}
+public record AuthorizeResponseDto(AccountDto AccountDto, TokenPairDto Tokens);

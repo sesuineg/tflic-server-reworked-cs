@@ -1,10 +1,10 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using Microsoft.AspNetCore.JsonPatch;
+﻿using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using TFlic.Controllers.Version2.DTO.GET;
 using TFlic.Controllers.Version2.DTO.POST;
-using TFlic.Controllers.Version2.Service;
 using TFlic.Models.Contexts;
+using ModelTask = TFlic.Models.Organization.Project.Task;
 
 namespace TFlic.Controllers.Version2;
 
@@ -14,87 +14,89 @@ using Microsoft.AspNetCore.Authorization;
 [Authorize]
 #endif
 [ApiController]
-[Route("api/v2/organizations/{organizationId}/projects/{projectId}/boards/{boardId}/columns/{columnId}")]
+[Route("api/v2")]
 public class TaskController : ControllerBase
 {
-    public TaskController(TaskContext taskContext)
+    public TaskController(TaskContext taskContext, ColumnContext columnContext)
     {
         _taskContext = taskContext;
+        _columnContext = columnContext;
     }
 
     #region GET
-    [HttpGet("tasks")]
-    public ActionResult<ICollection<TaskGet>> GetTasks(ulong organizationId, ulong projectId, ulong boardId, ulong columnId)
+    // todo продумать возврат задач не для колонки, а для всего проекта
+    [HttpGet("columns/{columnId}/tasks")]
+    public ActionResult<IEnumerable<TaskGet>> GetTasks(ulong columnId)
     {
 #if AUTH
         var token = TokenProvider.GetToken(Request);
         if (!AuthenticationManager.Authorize(token, OrganizationId, allowNoRole: true)) { return Forbid(); }
 #endif
-        if (!PathChecker.IsTaskPathCorrect(organizationId, projectId, boardId, columnId))
+
+        var column = _columnContext.Columns.SingleOrDefault(column => column.Id == columnId);
+        if (column is null)
             return NotFound();
 
-        var cmp = ContextIncluder.GetTask(_taskContext)
-            //.Include(x => x.Components)
-            .Where(x => x.ColumnId == columnId)
-            .Select(x => new TaskGet(x))
-            .ToList();
-        return Ok(cmp);
+        var tasks = _taskContext.Tasks
+            .Where(task => task.ColumnId == columnId)
+            .Select(task => new TaskGet(task));
+
+        return Ok(tasks);
     }
     
     [HttpGet("tasks/{taskId}")]
-    public ActionResult<TaskGet> GetTask(ulong organizationId, ulong projectId, ulong boardId, ulong columnId, ulong taskId)
+    public ActionResult<TaskGet> GetTask(ulong taskId)
     {
 #if AUTH
         var token = TokenProvider.GetToken(Request);
         if (!AuthenticationManager.Authorize(token, OrganizationId, allowNoRole: true)) { return Forbid(); }
 #endif
-        if (!PathChecker.IsTaskPathCorrect(organizationId, projectId, boardId, columnId))
-            return NotFound();
 
-        var cmp = ContextIncluder.GetTask(_taskContext)
-            //.Include(x => x.Components)
-            .Where(x => x.ColumnId == columnId && x.Id == taskId)
-            .Select(x => new TaskGet(x))
-            .ToList();
-        return !cmp.Any() ? NotFound() : Ok(cmp.Single());
+        var task = _taskContext.Tasks.SingleOrDefault(task => task.Id == taskId);
+
+        return task is not null
+            ? new TaskGet(task)
+            : NotFound();
     }
     #endregion
 
     #region DELETE
     [HttpDelete("tasks/{taskId}")]
-    public ActionResult DeleteTask(ulong organizationId, ulong projectId, ulong boardId, ulong columnId, ulong taskId)
+    public ActionResult DeleteTask(ulong taskId)
     {
 #if AUTH
         var token = TokenProvider.GetToken(Request);
         if (!AuthenticationManager.Authorize(token, OrganizationId)) { return Forbid(); }
 #endif
-        if (!PathChecker.IsTaskPathCorrect(organizationId, projectId, boardId, columnId))
+
+        var taskToDelete = _taskContext.Tasks.SingleOrDefault(task => task.Id == taskId);
+        if (taskToDelete is null)
             return NotFound();
 
-        var cmp = ContextIncluder.DeleteTask(_taskContext)
-            .Where(x => x.Id == taskId && x.ColumnId == columnId);
-        _taskContext.Tasks.RemoveRange(cmp);
+        _taskContext.Tasks.Remove(taskToDelete);
         _taskContext.SaveChanges();
+
         return Ok();
     }
     
     #endregion
 
     #region POST
-    [HttpPost("tasks")]
-    public ActionResult<TaskGet> PostTask(ulong organizationId, ulong projectId, ulong boardId, ulong columnId,
+    [HttpPost("columns/{columnId}/tasks")]
+    public ActionResult<TaskGet> CreateTask(ulong columnId,
         TaskDto taskDto)
     {
 #if AUTH
         var token = TokenProvider.GetToken(Request);
         if (!AuthenticationManager.Authorize(token, OrganizationId)) { return Forbid(); }
 #endif
-        if (!PathChecker.IsTaskPathCorrect(organizationId, projectId, boardId, columnId))
+
+        var column = _columnContext.Columns.SingleOrDefault(column => column.Id == columnId);
+        if (column is null)
             return NotFound();
-        
-        var obj = new Models.Organization.Project.Task()
+
+        var newTask = new ModelTask
         {
-            
             Name = taskDto.Name,
             Position = taskDto.Position,
             Description = taskDto.Description,
@@ -106,34 +108,36 @@ public class TaskController : ControllerBase
             priority = taskDto.Priority,
             EstimatedTime = taskDto.EstimatedTime
         };
-        _taskContext.Tasks.Add(obj);
+        
+        _taskContext.Tasks.Add(newTask);
         _taskContext.SaveChanges();
-        return Ok(new TaskGet(obj));
+        return Ok(new TaskGet(newTask));
     }
     #endregion
     
     #region PATCH
     [HttpPatch("tasks/{taskId}")]
-    public ActionResult<TaskGet> PatchTask(ulong organizationId, ulong projectId, ulong boardId, ulong columnId, ulong taskId,
-        [FromBody] JsonPatchDocument<Models.Organization.Project.Task> patch)
+    public ActionResult<TaskGet> PatchTask(ulong taskId,
+        [FromBody] JsonPatchDocument<ModelTask> patch)
     {
 #if AUTH
         var token = TokenProvider.GetToken(Request);
         if (!AuthenticationManager.Authorize(token, OrganizationId)) { return Forbid(); }
 #endif
-        if (!PathChecker.IsTaskPathCorrect(organizationId, projectId, boardId, columnId))
+        
+        var taskToPatch = _taskContext.Tasks.SingleOrDefault(task => task.Id == taskId);
+        if (taskToPatch is null)
             return NotFound();
 
-        var obj = ContextIncluder.GetTask(_taskContext)
-            .Where(x => x.Id == taskId && x.ColumnId == columnId).ToList();
-        patch.ApplyTo(obj.Single());
+        patch.ApplyTo(taskToPatch);
         _taskContext.SaveChanges();
         
-        return Ok(new TaskGet(obj.Single()));
+        return Ok(new TaskGet(taskToPatch));
     }
     #endregion
     
     
     
     private readonly TaskContext _taskContext;
+    private readonly ColumnContext _columnContext;
 }

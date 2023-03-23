@@ -1,7 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using TFlic.Models.Organization.Accounts;
-using TFlic.Models.Organization.Project.Component;
 
 namespace TFlic.Models.Organization.Project;
 
@@ -66,9 +65,4 @@ public class Task
     
     [Column("deadline")]
     public DateTime Deadline { get; set; }
-
-    /// <summary>
-    /// Компоненты задачи
-    /// </summary>
-    public ICollection<ComponentDto> Components { get; set; }
 }
