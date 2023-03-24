@@ -49,7 +49,6 @@ void ConfigureServices()
         builderServices.AddDbContext<AuthInfoContext>(options => options.UseNpgsql(dbConnectionString));
         builderServices.AddDbContext<BoardContext>(options => options.UseNpgsql(dbConnectionString));
         builderServices.AddDbContext<ColumnContext>(options => options.UseNpgsql(dbConnectionString));
-        builderServices.AddDbContext<ComponentContext>(options => options.UseNpgsql(dbConnectionString));
         builderServices.AddDbContext<OrganizationContext>(options => options.UseNpgsql(dbConnectionString));
         builderServices.AddDbContext<ProjectContext>(options => options.UseNpgsql(dbConnectionString));
         builderServices.AddDbContext<TaskContext>(options => options.UseNpgsql(dbConnectionString));
