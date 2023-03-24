@@ -19,7 +19,6 @@ public class ProjectController : ControllerBase
         _organizationContext = organizationContext;
     }
 
-    #region GET
     [HttpGet("organizations/{organizationId}/projects")]
     public ActionResult<IEnumerable<ProjectGet>> GetProjects(ulong organizationId)
     {
@@ -44,9 +43,7 @@ public class ProjectController : ControllerBase
             : NotFound();
     }
     
-    #endregion
 
-    #region DELETE
     [HttpDelete("projects/{projectId}")]
     public ActionResult DeleteProjects(ulong projectId)
     {
@@ -59,9 +56,7 @@ public class ProjectController : ControllerBase
 
         return Ok();
     }
-    #endregion
 
-    #region POST
     [HttpPost("organizations/{organizationId}/projects")]
     public ActionResult<ProjectGet> CreateProject(ulong organizationId, ProjectDto project)
     {
@@ -80,9 +75,7 @@ public class ProjectController : ControllerBase
             
         return Ok(new ProjectGet(newProject));
     }
-    #endregion
 
-    #region PATCH
     [HttpPatch("projects/{projectId}")]
     public ActionResult<ProjectGet> PatchProject(ulong projectId, [FromBody] JsonPatchDocument<Project> patch)
     {
@@ -95,7 +88,6 @@ public class ProjectController : ControllerBase
         
         return Ok(new ProjectGet(projectToPatch));
     }
-    #endregion
     
     
     

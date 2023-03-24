@@ -18,9 +18,7 @@ public class ColumnsController : ControllerBase
         _columnContext = columnContext;
         _boardContext = boardContext;
     }
-
-    // todo удалить регионы
-    #region GET
+    
     [HttpGet("boards/{boardId}/columns")]
     public ActionResult<IEnumerable<ColumnGet>> GetColumns(ulong boardId)
     {
@@ -46,9 +44,7 @@ public class ColumnsController : ControllerBase
             ? new ColumnGet(column)
             : NotFound();
     }
-    #endregion
 
-    #region DELETE
     [HttpDelete("columns/{columnId}")]
     public ActionResult DeleteColumn(ulong columnId)
     {
@@ -63,9 +59,7 @@ public class ColumnsController : ControllerBase
 
         return Ok();
     }
-    #endregion
 
-    #region POST
     [HttpPost("boards/{boardId}/columns")]
     public ActionResult<ColumnGet> CreateColumn(ulong boardId, ColumnDto column)
     {
@@ -85,9 +79,7 @@ public class ColumnsController : ControllerBase
         
         return Ok(new ColumnGet(newColumn));
     }
-    #endregion
     
-    #region PATCH
     [HttpPatch("columns/{columnId}")]
     public ActionResult<ColumnGet> PatchColumn(ulong columnId, [FromBody] JsonPatchDocument<Column> patch)
     {
@@ -100,7 +92,6 @@ public class ColumnsController : ControllerBase
         
         return Ok(new ColumnGet(columnToPatch));
     }
-    #endregion
 
 
 

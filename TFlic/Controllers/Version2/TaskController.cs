@@ -19,7 +19,6 @@ public class TaskController : ControllerBase
         _columnContext = columnContext;
     }
 
-    #region GET
     // todo продумать возврат задач не для колонки, а для всего проекта
     [HttpGet("columns/{columnId}/tasks")]
     public ActionResult<IEnumerable<TaskGet>> GetTasks(ulong columnId)
@@ -44,9 +43,7 @@ public class TaskController : ControllerBase
             ? new TaskGet(task)
             : NotFound();
     }
-    #endregion
 
-    #region DELETE
     [HttpDelete("tasks/{taskId}")]
     public ActionResult DeleteTask(ulong taskId)
     {
@@ -60,9 +57,7 @@ public class TaskController : ControllerBase
         return Ok();
     }
     
-    #endregion
 
-    #region POST
     [HttpPost("columns/{columnId}/tasks")]
     public ActionResult<TaskGet> CreateTask(ulong columnId,
         TaskDto taskDto)
@@ -89,9 +84,7 @@ public class TaskController : ControllerBase
         _taskContext.SaveChanges();
         return Ok(new TaskGet(newTask));
     }
-    #endregion
     
-    #region PATCH
     [HttpPatch("tasks/{taskId}")]
     public ActionResult<TaskGet> PatchTask(ulong taskId,
         [FromBody] JsonPatchDocument<ModelTask> patch)
@@ -105,7 +98,6 @@ public class TaskController : ControllerBase
         
         return Ok(new TaskGet(taskToPatch));
     }
-    #endregion
     
     
     

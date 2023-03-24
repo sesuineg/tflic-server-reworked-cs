@@ -20,7 +20,6 @@ public class BoardsController : ControllerBase
         _projectContext = projectContext;
     }
 
-    #region GET
     [HttpGet("projects/{projectId}/boards")]
     public ActionResult<IEnumerable<BoardGet>> GetBoards(ulong projectId)
     {
@@ -48,9 +47,7 @@ public class BoardsController : ControllerBase
             ? Ok(new BoardGet(board))
             : NotFound();
     }
-    #endregion
 
-    #region DELETE
     [HttpDelete("boards/{boardId}")]
     public ActionResult DeleteBoards(ulong boardId)
     {
@@ -65,9 +62,7 @@ public class BoardsController : ControllerBase
         
         return Ok();
     }
-    #endregion
     
-    #region POST
     [HttpPost("projects/{projectId}/boards")]
     public ActionResult<BoardGet> CreateBoard(ulong projectId, BoardDto board)
     {
@@ -87,9 +82,7 @@ public class BoardsController : ControllerBase
         
         return Ok(new BoardGet(newBoard));
     }
-    #endregion
     
-    #region PATCH
     [HttpPatch("boards/{boardId}")]
     public ActionResult<BoardGet> PatchBoard(ulong boardId, [FromBody] JsonPatchDocument<Board> patch)
     {
@@ -102,7 +95,6 @@ public class BoardsController : ControllerBase
         
         return Ok(new BoardGet(boardToPatch));
     }
-    #endregion
     
     
     
