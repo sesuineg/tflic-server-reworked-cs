@@ -45,14 +45,12 @@ void ConfigureServices()
     void ConfigureDbContexts()
     {
         var dbConnectionString = GetDbConnectionString();
-        builderServices.AddDbContext<AccountContext>(options => options.UseNpgsql(dbConnectionString));
-        builderServices.AddDbContext<AuthInfoContext>(options => options.UseNpgsql(dbConnectionString));
-        builderServices.AddDbContext<BoardContext>(options => options.UseNpgsql(dbConnectionString));
-        builderServices.AddDbContext<ColumnContext>(options => options.UseNpgsql(dbConnectionString));
-        builderServices.AddDbContext<OrganizationContext>(options => options.UseNpgsql(dbConnectionString));
-        builderServices.AddDbContext<ProjectContext>(options => options.UseNpgsql(dbConnectionString));
-        builderServices.AddDbContext<TaskContext>(options => options.UseNpgsql(dbConnectionString));
-        builderServices.AddDbContext<UserGroupContext>(options => options.UseNpgsql(dbConnectionString));
+        builderServices.AddDbContext<TFlicDbContext>(
+            options =>
+            {
+                options.UseNpgsql(dbConnectionString);
+                options.EnableSensitiveDataLogging();
+            });
 
 
 

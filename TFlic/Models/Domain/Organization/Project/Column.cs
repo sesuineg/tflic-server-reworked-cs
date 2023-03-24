@@ -1,54 +1,31 @@
-﻿using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
+﻿namespace TFlic.Models.Domain.Organization.Project;
 
-namespace TFlic.Models.Domain.Organization.Project;
-
-[Table("columns")]
 public class Column
 {
     /// <summary>
     /// Уникальный идентификатор столбца
     /// </summary>
-    [Column("id")]
     public ulong Id { get; set; }
     
-    [Column("board_id")]
-    [ForeignKey("Board")]
-
     public ulong BoardId { get; set; }
 
-    public Board Board { get; set; }
+    public Board? Board { get; set; }
 
     /// <summary>
     /// Название столбца
     /// </summary>
-    [Required]
-    [Column("name")]
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
     /// Позиция столбца на доске
     /// </summary>
-    [Column("position")]
     public int Position { get; set; }
-
-    /// <summary>
-    /// Допустимое количество задач в столбце
-    /// </summary>
-    [NotMapped]
-    //[Column("limit_of_task")]
-    public int LimitOfTask { get; set; }
 
     /// <summary>
     /// Задачи
     /// </summary>
-    public ICollection<Task> Tasks
-    {
-        get => _tasks;
-        init => _tasks = (List<Task>)value;
-    }
-    private readonly List<Task> _tasks = new();
-
+    public ICollection<Task> Tasks { get; init; } = new List<Task>();
+    
     /// <summary>
     /// Переместить задачу в другую позицию
     /// </summary>
@@ -60,7 +37,7 @@ public class Column
         if (Tasks.Count <= position || !ContainTask(id))
             return false;
         var targetTask = GetTask(id);
-        targetTask.Position = position;
+        targetTask!.Position = position; // восклицательный знак только потому, что метод не используется и будет переписан
         foreach (var item in Tasks.Where(task => task.Position >= targetTask.Position))
             item.Position--;
         return true;

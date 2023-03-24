@@ -18,14 +18,14 @@ public class RefreshTokenService : IRefreshTokenService
         var refreshToken = new byte[32];
         Gen.GetBytes(refreshToken);
 
-        var serializedToken = SerializeToken(refreshToken);
+        var serializedToken = SerializeToken();
         var expirationTime = CalculateTokenExpirationTime();
 
         return (serializedToken, expirationTime);
         
         
         
-        string SerializeToken(byte[] token) =>
+        string SerializeToken() =>
             Convert.ToBase64String(refreshToken);
         
         DateTime CalculateTokenExpirationTime() =>
@@ -41,8 +41,8 @@ public class RefreshTokenService : IRefreshTokenService
 
         AuthInfo GetAuthInfo()
         {
-            var authInfoContext = DbContexts.Get<AuthInfoContext>();
-            var accountAuthInfo = authInfoContext.Info.First(info => info.AccountId == tokenOwnerId);
+            var dbContext = DbContexts.Get<TFlicDbContext>();
+            var accountAuthInfo = dbContext.AuthInfo.First(info => info.AccountId == tokenOwnerId);
 
             return accountAuthInfo;
         }

@@ -6,10 +6,10 @@ public class ProjectGet
 {
     public ProjectGet(Project project)
     {
-        Id = project.id;
-        Name = project.name;
-        if (project.boards == null) return;
-        foreach (var board in project.boards) { Boards.Add(board.id); }
+        Id = project.Id;
+        Name = project.Name;
+        if (project.Boards == null) return;
+        foreach (var board in project.Boards) { Boards.Add(board.Id); }
     }
     public ulong Id { get; set; }
     public string Name { get; set; }

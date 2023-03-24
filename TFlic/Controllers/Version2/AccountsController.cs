@@ -15,12 +15,9 @@ namespace TFlic.Controllers.Version2;
 [Route("api/v2/accounts")]
 public class AccountsController : ControllerBase
 {
-    public AccountsController(
-        AccountContext accountContext,
-        AuthInfoContext authInfoContext)
+    public AccountsController(TFlicDbContext dbContext)
     {
-        _accountContext = accountContext;
-        _authInfoContext = authInfoContext;
+        _dbContext = dbContext;
     }
     
     /// <summary>
@@ -29,9 +26,10 @@ public class AccountsController : ControllerBase
     [HttpGet("{login}")]
     public ActionResult<AccountDto> GetAccountByLogin(string login)
     {
-        var account = _authInfoContext.Info
+        var account = _dbContext.AuthInfo
             .Where(info => info.Login == login)
             .Include(info => info.Account)
+            .ThenInclude(account => account.UserGroups)
             .Select(info => info.Account)
             .SingleOrDefault();
         if (account is null) { return NotFound(); }
@@ -40,7 +38,7 @@ public class AccountsController : ControllerBase
         {
             Id = account.Id,
             Name = account.Name,
-            UserGroups = account.GetUserGroups(),
+            UserGroups = account.UserGroups,
             AuthInfo = new AuthInfo
             {
                 Login = login,
@@ -56,7 +54,10 @@ public class AccountsController : ControllerBase
     [HttpGet("{accountId:long}")]
     public ActionResult<AccountDto> GetAccountById(long accountId)
     {
-        var account = _accountContext.Accounts
+        var q = _dbContext.Accounts
+            .SingleOrDefault(acc => acc.Id == (ulong)accountId);
+        
+        var account = _dbContext.Accounts
             .Where(acc => acc.Id == (ulong) accountId)
             .Include(acc => acc.UserGroups)
             .Include(acc => acc.AuthInfo)
@@ -73,7 +74,7 @@ public class AccountsController : ControllerBase
     [HttpPatch("{accountId}")]
     public ActionResult<AccountDto> PatchAccount(ulong accountId, [FromBody] JsonPatchDocument<Account> patch)
     {
-        var account = _accountContext.Accounts
+        var account = _dbContext.Accounts
             .Where(acc => acc.Id == accountId)
             .Include(acc => acc.UserGroups)
             .Include(acc => acc.AuthInfo)
@@ -82,7 +83,7 @@ public class AccountsController : ControllerBase
         
         
         patch.ApplyTo(account);
-        _accountContext.SaveChanges(); 
+        _dbContext.SaveChanges(); 
 
         return Ok(new AccountDto(account)) ;
     }
@@ -93,7 +94,7 @@ public class AccountsController : ControllerBase
     [HttpGet("{accountId}/organizations")]
     public ActionResult<IEnumerable<ulong>> GetAccountsOrganizations(ulong accountId)
     {
-        var account = _accountContext.Accounts.SingleOrDefault(acc => acc.Id == accountId);
+        var account = _dbContext.Accounts.SingleOrDefault(acc => acc.Id == accountId);
         if (account is null) { return NotFound(); }
 
         var organizationIds = account.GetOrganizations().Select(org => org.Id);
@@ -102,6 +103,5 @@ public class AccountsController : ControllerBase
     
     
     
-    private readonly AccountContext _accountContext;
-    private readonly AuthInfoContext _authInfoContext;
+    private readonly TFlicDbContext _dbContext;
 }

@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using TFlic.Controllers.Version2.DTO.GET;
 using TFlic.Controllers.Version2.DTO.POST;
 using TFlic.Models.Domain.Organization.Project;
@@ -13,21 +14,20 @@ namespace TFlic.Controllers.Version2;
 [Route("api/v2")]
 public class ColumnsController : ControllerBase
 {
-    public ColumnsController(ColumnContext columnContext, BoardContext boardContext)
+    public ColumnsController(TFlicDbContext dbContext)
     {
-        _columnContext = columnContext;
-        _boardContext = boardContext;
+        _dbContext = dbContext;
     }
     
     [HttpGet("boards/{boardId}/columns")]
     public ActionResult<IEnumerable<ColumnGet>> GetColumns(ulong boardId)
     {
-        // todo вынести _boardContext.Boards в отдельную переменную _boards 
-        var board = _boardContext.Boards.SingleOrDefault(board => board.id == boardId);
+        // todo вынести _dbContext.Boards в отдельную переменную _boards 
+        var board = _dbContext.Boards.SingleOrDefault(board => board.Id == boardId);
         if (board is null)
             return NotFound();
 
-        var columns = _columnContext.Columns
+        var columns = _dbContext.Columns
             .Where(column => column.BoardId == boardId)
             .Select(column => new ColumnGet(column));
         
@@ -37,8 +37,10 @@ public class ColumnsController : ControllerBase
     [HttpGet("columns/{columnId}")]
     public ActionResult<ColumnGet> GetColumn(ulong columnId)
     {
-        var column = _columnContext.Columns
-            .SingleOrDefault(column => column.Id == columnId);
+        var column = _dbContext.Columns
+            .Where(column => column.Id == columnId)
+            .Include(column => column.Tasks)
+            .SingleOrDefault();
             
         return column is not null
             ? new ColumnGet(column)
@@ -48,14 +50,14 @@ public class ColumnsController : ControllerBase
     [HttpDelete("columns/{columnId}")]
     public ActionResult DeleteColumn(ulong columnId)
     {
-        var columnToDelete = _columnContext.Columns
+        var columnToDelete = _dbContext.Columns
             .SingleOrDefault(column => column.Id == columnId);
 
         if (columnToDelete is null)
             return NotFound($"column with id {columnId} doesn't exist");
 
-        _columnContext.Columns.Remove(columnToDelete);
-        _columnContext.SaveChanges();
+        _dbContext.Columns.Remove(columnToDelete);
+        _dbContext.SaveChanges();
 
         return Ok();
     }
@@ -63,7 +65,7 @@ public class ColumnsController : ControllerBase
     [HttpPost("boards/{boardId}/columns")]
     public ActionResult<ColumnGet> CreateColumn(ulong boardId, ColumnDto column)
     {
-        var board = _boardContext.Boards.SingleOrDefault(board => board.id == boardId);
+        var board = _dbContext.Boards.SingleOrDefault(board => board.Id == boardId);
         if (board is null)
             return NotFound();
         
@@ -71,11 +73,10 @@ public class ColumnsController : ControllerBase
         {
             Name = column.Name,
             Position = column.Position,
-            LimitOfTask = column.LimitOfTask,
             BoardId = boardId
         };
-        _columnContext.Columns.Add(newColumn);
-        _columnContext.SaveChanges();
+        _dbContext.Columns.Add(newColumn);
+        _dbContext.SaveChanges();
         
         return Ok(new ColumnGet(newColumn));
     }
@@ -83,18 +84,17 @@ public class ColumnsController : ControllerBase
     [HttpPatch("columns/{columnId}")]
     public ActionResult<ColumnGet> PatchColumn(ulong columnId, [FromBody] JsonPatchDocument<Column> patch)
     {
-        var columnToPatch = _columnContext.Columns.SingleOrDefault(column => column.Id == columnId);
+        var columnToPatch = _dbContext.Columns.SingleOrDefault(column => column.Id == columnId);
         if (columnToPatch is null)
             return NotFound();
 
         patch.ApplyTo(columnToPatch);
-        _columnContext.SaveChanges();
+        _dbContext.SaveChanges();
         
         return Ok(new ColumnGet(columnToPatch));
     }
 
 
 
-    private readonly ColumnContext _columnContext;
-    private readonly BoardContext _boardContext;
+    private readonly TFlicDbContext _dbContext;
 }

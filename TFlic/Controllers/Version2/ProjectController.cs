@@ -13,21 +13,20 @@ namespace TFlic.Controllers.Version2;
 [Route("api/v2")]
 public class ProjectController : ControllerBase
 {
-    public ProjectController(ProjectContext projectContext, OrganizationContext organizationContext)
+    public ProjectController(TFlicDbContext dbContext)
     {
-        _projectContext = projectContext;
-        _organizationContext = organizationContext;
+        _dbContext = dbContext;
     }
 
     [HttpGet("organizations/{organizationId}/projects")]
     public ActionResult<IEnumerable<ProjectGet>> GetProjects(ulong organizationId)
     {
-        var organization = _organizationContext.Organizations
+        var organization = _dbContext.Organizations
             .SingleOrDefault(org => org.Id == organizationId);
         if (organization is null)
             return NotFound();
 
-        var projects = _projectContext.Projects
+        var projects = _dbContext.Projects
             .Where(project => project.OrganizationId == organizationId)
             .Select(project => new ProjectGet(project));
 
@@ -37,7 +36,7 @@ public class ProjectController : ControllerBase
     [HttpGet("projects/{projectId}")]
     public ActionResult<ProjectGet> GetProject(ulong projectId)
     {
-        var project = _projectContext.Projects.SingleOrDefault(project => project.id == projectId);
+        var project = _dbContext.Projects.SingleOrDefault(project => project.Id == projectId);
         return project is not null
             ? new ProjectGet(project)
             : NotFound();
@@ -47,12 +46,12 @@ public class ProjectController : ControllerBase
     [HttpDelete("projects/{projectId}")]
     public ActionResult DeleteProjects(ulong projectId)
     {
-        var projectToDelete = _projectContext.Projects.SingleOrDefault(project => project.id == projectId);
+        var projectToDelete = _dbContext.Projects.SingleOrDefault(project => project.Id == projectId);
         if (projectToDelete is null)
             return NotFound();
 
-        _projectContext.Projects.Remove(projectToDelete);
-        _projectContext.SaveChanges();
+        _dbContext.Projects.Remove(projectToDelete);
+        _dbContext.SaveChanges();
 
         return Ok();
     }
@@ -60,18 +59,18 @@ public class ProjectController : ControllerBase
     [HttpPost("organizations/{organizationId}/projects")]
     public ActionResult<ProjectGet> CreateProject(ulong organizationId, ProjectDto project)
     {
-        var organization = _organizationContext.Organizations
+        var organization = _dbContext.Organizations
             .SingleOrDefault(org => org.Id == organizationId);
         if (organization is null)
             return NotFound();
 
         var newProject = new Project
         {
-            name = project.Name,
+            Name = project.Name,
             OrganizationId = organizationId
         };
-        _projectContext.Projects.Add(newProject);
-        _projectContext.SaveChanges();
+        _dbContext.Projects.Add(newProject);
+        _dbContext.SaveChanges();
             
         return Ok(new ProjectGet(newProject));
     }
@@ -79,18 +78,17 @@ public class ProjectController : ControllerBase
     [HttpPatch("projects/{projectId}")]
     public ActionResult<ProjectGet> PatchProject(ulong projectId, [FromBody] JsonPatchDocument<Project> patch)
     {
-        var projectToPatch = _projectContext.Projects.SingleOrDefault(project => project.id == projectId);
+        var projectToPatch = _dbContext.Projects.SingleOrDefault(project => project.Id == projectId);
         if (projectToPatch is null)
             return NotFound();
         
         patch.ApplyTo(projectToPatch);
-        _projectContext.SaveChanges();
+        _dbContext.SaveChanges();
         
         return Ok(new ProjectGet(projectToPatch));
     }
     
     
     
-    private readonly ProjectContext _projectContext;
-    private readonly OrganizationContext _organizationContext;
+    private readonly TFlicDbContext _dbContext;
 }

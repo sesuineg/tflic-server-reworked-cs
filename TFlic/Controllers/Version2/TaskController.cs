@@ -13,21 +13,20 @@ namespace TFlic.Controllers.Version2;
 [Route("api/v2")]
 public class TaskController : ControllerBase
 {
-    public TaskController(TaskContext taskContext, ColumnContext columnContext)
+    public TaskController(TFlicDbContext dbContext)
     {
-        _taskContext = taskContext;
-        _columnContext = columnContext;
+        _dbContext = dbContext;
     }
 
     // todo продумать возврат задач не для колонки, а для всего проекта
     [HttpGet("columns/{columnId}/tasks")]
     public ActionResult<IEnumerable<TaskGet>> GetTasks(ulong columnId)
     {
-        var column = _columnContext.Columns.SingleOrDefault(column => column.Id == columnId);
+        var column = _dbContext.Columns.SingleOrDefault(column => column.Id == columnId);
         if (column is null)
             return NotFound();
 
-        var tasks = _taskContext.Tasks
+        var tasks = _dbContext.Tasks
             .Where(task => task.ColumnId == columnId)
             .Select(task => new TaskGet(task));
 
@@ -37,7 +36,7 @@ public class TaskController : ControllerBase
     [HttpGet("tasks/{taskId}")]
     public ActionResult<TaskGet> GetTask(ulong taskId)
     {
-        var task = _taskContext.Tasks.SingleOrDefault(task => task.Id == taskId);
+        var task = _dbContext.Tasks.SingleOrDefault(task => task.Id == taskId);
 
         return task is not null
             ? new TaskGet(task)
@@ -47,22 +46,21 @@ public class TaskController : ControllerBase
     [HttpDelete("tasks/{taskId}")]
     public ActionResult DeleteTask(ulong taskId)
     {
-        var taskToDelete = _taskContext.Tasks.SingleOrDefault(task => task.Id == taskId);
+        var taskToDelete = _dbContext.Tasks.SingleOrDefault(task => task.Id == taskId);
         if (taskToDelete is null)
             return NotFound();
 
-        _taskContext.Tasks.Remove(taskToDelete);
-        _taskContext.SaveChanges();
+        _dbContext.Tasks.Remove(taskToDelete);
+        _dbContext.SaveChanges();
 
         return Ok();
     }
     
 
     [HttpPost("columns/{columnId}/tasks")]
-    public ActionResult<TaskGet> CreateTask(ulong columnId,
-        TaskDto taskDto)
+    public ActionResult<TaskGet> CreateTask(ulong columnId, [FromBody] TaskDto taskDto)
     {
-        var column = _columnContext.Columns.SingleOrDefault(column => column.Id == columnId);
+        var column = _dbContext.Columns.SingleOrDefault(column => column.Id == columnId);
         if (column is null)
             return NotFound();
 
@@ -76,31 +74,29 @@ public class TaskController : ControllerBase
             ColumnId = columnId,
             ExecutorId = taskDto.IdExecutor,
             Deadline = taskDto.Deadline,
-            priority = taskDto.Priority,
+            Priority = taskDto.Priority,
             EstimatedTime = taskDto.EstimatedTime
         };
         
-        _taskContext.Tasks.Add(newTask);
-        _taskContext.SaveChanges();
+        _dbContext.Tasks.Add(newTask);
+        _dbContext.SaveChanges();
         return Ok(new TaskGet(newTask));
     }
     
     [HttpPatch("tasks/{taskId}")]
-    public ActionResult<TaskGet> PatchTask(ulong taskId,
-        [FromBody] JsonPatchDocument<ModelTask> patch)
+    public ActionResult<TaskGet> PatchTask(ulong taskId, [FromBody] JsonPatchDocument<ModelTask> patch)
     {
-        var taskToPatch = _taskContext.Tasks.SingleOrDefault(task => task.Id == taskId);
+        var taskToPatch = _dbContext.Tasks.SingleOrDefault(task => task.Id == taskId);
         if (taskToPatch is null)
             return NotFound();
 
         patch.ApplyTo(taskToPatch);
-        _taskContext.SaveChanges();
+        _dbContext.SaveChanges();
         
         return Ok(new TaskGet(taskToPatch));
     }
     
     
     
-    private readonly TaskContext _taskContext;
-    private readonly ColumnContext _columnContext;
+    private readonly TFlicDbContext _dbContext;
 }

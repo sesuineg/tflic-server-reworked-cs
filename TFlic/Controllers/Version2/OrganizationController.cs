@@ -22,14 +22,9 @@ using ModelOrganization = Organization;
 [Route("api/v2")]
 public class OrganizationController : ControllerBase
 {
-    public OrganizationController(
-        OrganizationContext organizationContext,
-        AccountContext accountContext,
-        AuthInfoContext authInfoContext)
+    public OrganizationController(TFlicDbContext dbContext)
     {
-        _organizationContext = organizationContext;
-        _accountContext = accountContext;
-        _authInfoContext = authInfoContext;
+        _dbContext = dbContext;
     }
     
     /// <summary>
@@ -39,7 +34,7 @@ public class OrganizationController : ControllerBase
     public ActionResult<OrganizationDto> GetOrganization(ulong organizationId)
     {
         var organization = DbValueRetriever.Retrieve(
-            _organizationContext.Organizations.Include(org => org.Projects), 
+            _dbContext.Organizations.Include(org => org.Projects), 
             organizationId, 
             nameof(ModelOrganization.Id)
         );
@@ -55,7 +50,7 @@ public class OrganizationController : ControllerBase
     [HttpPost("organizations")]
     public ActionResult<OrganizationDto> CreateOrganization([FromBody] NewOrganizationDto registration)
     {
-        var creator = DbValueRetriever.Retrieve(_accountContext.Accounts, registration.CreatorId, nameof(ModelAccount.Id));
+        var creator = DbValueRetriever.Retrieve(_dbContext.Accounts, registration.CreatorId, nameof(ModelAccount.Id));
         if (creator is null) { return BadRequest($"account with id = {registration.CreatorId} doesnt exist"); }
         
         var newOrganization = new ModelOrganization
@@ -64,8 +59,8 @@ public class OrganizationController : ControllerBase
             Description = registration.Description
         };
         
-        _organizationContext.Add(newOrganization);
-        _organizationContext.SaveChanges();
+        _dbContext.Add(newOrganization);
+        _dbContext.SaveChanges();
         /*
          * добавлять группы пользователей можно только после сохранения организации в бд,
          * так как до сохранения организация не имеет Id (его выдает база данных), вследствие
@@ -85,14 +80,14 @@ public class OrganizationController : ControllerBase
     public ActionResult<OrganizationDto> EditOrganization(ulong organizationId, [FromBody] JsonPatchDocument<ModelOrganization> patch)
     {
         var organization = DbValueRetriever.Retrieve(
-            _organizationContext.Organizations.Include(org => org.Projects), 
+            _dbContext.Organizations.Include(org => org.Projects), 
             organizationId, 
             nameof(ModelOrganization.Id)
         );
         if (organization is null) { return NotFound(); }
         
         patch.ApplyTo(organization);
-        _organizationContext.SaveChanges();
+        _dbContext.SaveChanges();
         
         return Ok(new OrganizationDto(organization));
     }
@@ -103,7 +98,7 @@ public class OrganizationController : ControllerBase
     [HttpGet("{organizationId}/members")]
     public ActionResult<IEnumerable<AccountDto>> GetOrganizationMembers(ulong organizationId)
     {
-        var organization = DbValueRetriever.Retrieve(_organizationContext.Organizations, organizationId, nameof(ModelOrganization.Id));
+        var organization = DbValueRetriever.Retrieve(_dbContext.Organizations, organizationId, nameof(ModelOrganization.Id));
         if (organization is null) { return NotFound(); }
         
         var members = new List<ModelAccount>();
@@ -120,17 +115,23 @@ public class OrganizationController : ControllerBase
     // todo заменить логин на id
     public ActionResult<AccountDto> AddUserToOrganization(ulong organizationId, [FromBody] string login)
     {
-        var authInfo = DbValueRetriever.Retrieve(_authInfoContext.Info, login, nameof(AuthInfo.Login));
+        var authInfo = DbValueRetriever.Retrieve(_dbContext.AuthInfo, login, nameof(AuthInfo.Login));
         if (authInfo is null) { return NotFound(); }
         
+        /*
+         * Clearing dbContext cache to prevent auto including AuthInfo to Account's property -
+         * this causes inserting dublicates of some rows from AuthInfo table
+         */
+        _dbContext.ChangeTracker.Clear();
+        
         var account = DbValueRetriever.Retrieve(
-            _accountContext.Accounts.Include(acc => acc.UserGroups), 
+            _dbContext.Accounts.Include(acc => acc.UserGroups), 
             authInfo.AccountId, 
             nameof(ModelAccount.Id)
         );
         if (account is null) { return NotFound(); }
         
-        var organization = DbValueRetriever.Retrieve(_organizationContext.Organizations, organizationId, nameof(ModelOrganization.Id));
+        var organization = DbValueRetriever.Retrieve(_dbContext.Organizations, organizationId, nameof(ModelOrganization.Id));
         if (organization is null) { return NotFound(); }
 
         organization.AddAccount(account);
@@ -145,7 +146,7 @@ public class OrganizationController : ControllerBase
     [HttpDelete("organizations/{organizationId}/members/{memberId}")]
     public ActionResult DeleteOrganizationsMember(ulong organizationId, ulong memberId)
     {
-        var organization = DbValueRetriever.Retrieve(_organizationContext.Organizations, organizationId, nameof(ModelOrganization.Id));
+        var organization = DbValueRetriever.Retrieve(_dbContext.Organizations, organizationId, nameof(ModelOrganization.Id));
         if (organization is null) { return NotFound(); }
         
         var removed = organization.RemoveAccount(memberId);
@@ -161,7 +162,7 @@ public class OrganizationController : ControllerBase
     [HttpGet("{organizationId}/userGroups")]
     public ActionResult<IEnumerable<UserGroupDto>> GetUserGroups(ulong organizationId)
     {
-        var organization = DbValueRetriever.Retrieve(_organizationContext.Organizations, organizationId, nameof(ModelOrganization.Id));
+        var organization = DbValueRetriever.Retrieve(_dbContext.Organizations, organizationId, nameof(ModelOrganization.Id));
         if (organization is null) { return NotFound(); }
         
         var dtoUserGroups = organization.GetUserGroups().Select(ug => new UserGroupDto(ug));
@@ -174,7 +175,7 @@ public class OrganizationController : ControllerBase
     [HttpGet("{organizationId}/userGroups/{userGroupLocalId}/members")]
     public ActionResult<IEnumerable<AccountDto>> GetUserGroupMembers(ulong organizationId, short userGroupLocalId)
     {
-        var organization = DbValueRetriever.Retrieve(_organizationContext.Organizations, organizationId, nameof(ModelOrganization.Id));
+        var organization = DbValueRetriever.Retrieve(_dbContext.Organizations, organizationId, nameof(ModelOrganization.Id));
         if (organization is null) { return NotFound(); }
         
         var userGroup = DbValueRetriever.Retrieve(organization.GetUserGroups(), userGroupLocalId, nameof(ModelUserGroup.LocalId));
@@ -190,7 +191,7 @@ public class OrganizationController : ControllerBase
     [HttpPost("{organizationId}/userGroups/{userGroupLocalId}/members/{memberId}")]
     public ActionResult AddMemberToUserGroup(ulong organizationId, short userGroupLocalId, ulong memberId)
     {
-        var organization = DbValueRetriever.Retrieve(_organizationContext.Organizations, organizationId, nameof(ModelOrganization.Id));
+        var organization = DbValueRetriever.Retrieve(_dbContext.Organizations, organizationId, nameof(ModelOrganization.Id));
         if (organization is null) { return NotFound(); }
         
         if (organization.Contains(memberId) is null)
@@ -213,7 +214,7 @@ public class OrganizationController : ControllerBase
     [HttpDelete("{organizationId}/userGroups/{userGroupLocalId}/members/{memberId}")]
     public ActionResult DeleteMemberFromUserGroup(ulong organizationId, short userGroupLocalId, ulong memberId)
     {
-        var organization = DbValueRetriever.Retrieve(_organizationContext.Organizations, organizationId, nameof(ModelOrganization.Id));
+        var organization = DbValueRetriever.Retrieve(_dbContext.Organizations, organizationId, nameof(ModelOrganization.Id));
         if (organization is null) { return NotFound(); }
 
         organization.RemoveAccountFromGroup(memberId, userGroupLocalId);
@@ -222,7 +223,5 @@ public class OrganizationController : ControllerBase
 
 
 
-    private readonly OrganizationContext _organizationContext;
-    private readonly AccountContext _accountContext;
-    private readonly AuthInfoContext _authInfoContext;
+    private readonly TFlicDbContext _dbContext;
 }

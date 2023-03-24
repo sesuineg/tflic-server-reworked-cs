@@ -80,11 +80,24 @@
       <Content Include="..\initdb\208_tasks.sql">
         <Link>initdb\208_tasks.sql</Link>
       </Content>
+      <Content Remove="obj\**" />
     </ItemGroup>
 
     <ItemGroup>
       <Folder Include="Models\Domain\" />
       <Folder Include="Models\Services\" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Compile Remove="obj\**" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <EmbeddedResource Remove="obj\**" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Remove="obj\**" />
     </ItemGroup>
 
 </Project>

@@ -20,13 +20,11 @@ using ModelAccount = Account;
 public class AuthenticationController : ControllerBase
 {
     public AuthenticationController(
-        AccountContext accountContext,
-        AuthInfoContext authInfoContext, 
+        TFlicDbContext dbContext,
         IAccessTokenService accessTokenService,
         IRefreshTokenService refreshTokenService)
     {
-        _accountContext = accountContext;
-        _authInfoContext = authInfoContext;
+        _dbContext = dbContext;
         _accessTokenService = accessTokenService;
         _refreshTokenService = refreshTokenService;
     }
@@ -41,14 +39,12 @@ public class AuthenticationController : ControllerBase
         var authInfo = FindAccountsAuthInfo();
         if (authInfo is null) { return NotFound(); }
         
-        authInfo.Account.UserGroups = authInfo.Account.GetUserGroups();
-
         var (accessToken, refreshToken, refreshTokenExpirationTime) = GenerateTokens(authInfo.AccountId); 
         
         // сохраняем сгенерированный refreshToken в базу данных 
         authInfo.RefreshToken = refreshToken; 
         authInfo.RefreshTokenExpirationTime = refreshTokenExpirationTime; 
-        _authInfoContext.SaveChanges();
+        _dbContext.SaveChanges();
         
         return Ok(new AuthorizeResponseDto(
             new AccountDto(authInfo.Account),
@@ -58,12 +54,12 @@ public class AuthenticationController : ControllerBase
 
 
         AuthInfo? FindAccountsAuthInfo() =>
-            _authInfoContext.Info.Where(
+            _dbContext.AuthInfo.Where(
                     info => info.Login == authorizeRequest.Login &&
                             info.PasswordHash == passwordHash
                 ).Include(info => info.Account)
+                .ThenInclude(account => account.UserGroups)
                 .SingleOrDefault();
-        
     }
     
     /// <summary>
@@ -77,7 +73,7 @@ public class AuthenticationController : ControllerBase
         if (sidClaim is null) return NotFound();
 
         var accountId = ulong.Parse(sidClaim.Value);
-        var authInfo = _authInfoContext.Info
+        var authInfo = _dbContext.AuthInfo
             .SingleOrDefault(info => info.AccountId == accountId);
         if (authInfo is null) { return NotFound(); }
 
@@ -88,7 +84,7 @@ public class AuthenticationController : ControllerBase
 
         authInfo.RefreshToken = refreshToken;
         authInfo.RefreshTokenExpirationTime = refreshTokenExpirationTime;
-        _authInfoContext.SaveChanges();
+        _dbContext.SaveChanges();
         
         return Ok(new TokenPairDto(accessToken, refreshToken));
     }
@@ -104,14 +100,14 @@ public class AuthenticationController : ControllerBase
         
         var passwordHash = HashPassword(account.Password);
         var newAccount = CreateNewAccount();
-        newAccount = _accountContext.Add(newAccount).Entity;
-        _accountContext.SaveChanges();
+        newAccount = _dbContext.Add(newAccount).Entity;
+        _dbContext.SaveChanges();
         
         var (accessToken, refreshToken, refreshTokenExpirationTime) = GenerateTokens(newAccount.Id);
 
         newAccount.AuthInfo.RefreshToken = refreshToken;
         newAccount.AuthInfo.RefreshTokenExpirationTime = refreshTokenExpirationTime;
-        _accountContext.SaveChanges();
+        _dbContext.SaveChanges();
 
         var responseDto = new AuthorizeResponseDto(
             new AccountDto(newAccount),
@@ -122,8 +118,8 @@ public class AuthenticationController : ControllerBase
 
 
         bool IsLoginInUse() =>
-            _authInfoContext
-                .Info
+            _dbContext
+                .AuthInfo
                 .Any(info => info.Login == account.Login);
 
         ModelAccount CreateNewAccount()
@@ -188,8 +184,7 @@ public class AuthenticationController : ControllerBase
             Convert.ToBase64String(passwordHash);
     }
 
-    private readonly AccountContext _accountContext;
-    private readonly AuthInfoContext _authInfoContext;
+    private readonly TFlicDbContext _dbContext;
     private readonly IAccessTokenService _accessTokenService;
     private readonly IRefreshTokenService _refreshTokenService;
 }

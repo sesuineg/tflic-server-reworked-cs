@@ -15,7 +15,7 @@ public class TaskGet
         Status = task.Status;
         IdExecutor = task.ExecutorId;
         Deadline = task.Deadline;
-        Priority = task.priority;
+        Priority = task.Priority;
         EstimatedTime = task.EstimatedTime;
     }
     
@@ -24,7 +24,7 @@ public class TaskGet
 
     public int Position { get; set; }
     
-    public uint EstimatedTime { get; set; }
+    public TimeSpan? EstimatedTime { get; set; } 
 
     public string Name { get; set; }
 
@@ -32,6 +32,7 @@ public class TaskGet
 
     public string Description { get; set; }
     public ulong IdExecutor { get; set; }
+    
     public List<ulong> Authors {get;} = new();
     public DateTime CreationTime { get; set; }
     public DateTime Deadline { get; set; }

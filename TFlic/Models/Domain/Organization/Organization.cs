@@ -6,7 +6,6 @@ using TFlic.Models.Services.Contexts;
 
 namespace TFlic.Models.Domain.Organization;
 
-[Table("organizations")]
 public class Organization
 {
     #region Public
@@ -31,7 +30,7 @@ public class Organization
         var noRole = GetUserGroups()
             .FirstOrDefault(group => group.OrganizationId == Id && group.LocalId == (short) PrimaryUserGroups.NoRole);
         if (noRole is null) { throw new OrganizationException("Не найдена группа пользователей 'Пользователи без роли'"); }
-
+        
         noRole.AddAccount(account);
 
         return true;
@@ -46,8 +45,8 @@ public class Organization
     {
         if (Contains(accountId) is not null) { return false; }
 
-        using var accountContext = DbContexts.Get<AccountContext>();
-        var account = accountContext.Accounts.SingleOrDefault(acc => acc.Id == accountId);
+        using var dbContext = DbContexts.Get<TFlicDbContext>();
+        var account = dbContext.Accounts.SingleOrDefault(acc => acc.Id == accountId);
         if (account is null) { throw new ArgumentException($"Аккаунта с Id = {accountId} не существует"); }
         
         AddAccount(account);
@@ -101,13 +100,13 @@ public class Organization
     /// </summary>
     public void CreateUserGroups()
     {
-        using var userGroupContext = DbContexts.Get<UserGroupContext>();
+        using var dbContext = DbContexts.Get<TFlicDbContext>();
         
-        userGroupContext.Add(new UserGroup {LocalId = (short) PrimaryUserGroups.NoRole, OrganizationId = Id,  Name = "Пользователи без роли"});
-        userGroupContext.Add(new UserGroup {LocalId = (short) PrimaryUserGroups.ProjectsMembers, OrganizationId = Id, Name = "Участники проектов"});
-        userGroupContext.Add(new UserGroup {LocalId = (short) PrimaryUserGroups.Admins, OrganizationId = Id, Name = "Администраторы"});
+        dbContext.Add(new UserGroup {LocalId = (short) PrimaryUserGroups.NoRole, OrganizationId = Id,  Name = "Пользователи без роли"});
+        dbContext.Add(new UserGroup {LocalId = (short) PrimaryUserGroups.ProjectsMembers, OrganizationId = Id, Name = "Участники проектов"});
+        dbContext.Add(new UserGroup {LocalId = (short) PrimaryUserGroups.Admins, OrganizationId = Id, Name = "Администраторы"});
 
-        userGroupContext.SaveChanges();
+        dbContext.SaveChanges();
     }
     
     /// <summary>
@@ -115,8 +114,8 @@ public class Organization
     /// </summary>
     public ICollection<UserGroup> GetUserGroups() 
     {
-        using var userGroupContext = DbContexts.Get<UserGroupContext>();
-        var userGroups = userGroupContext.UserGroups
+        using var dbContext = DbContexts.Get<TFlicDbContext>();
+        var userGroups = dbContext.UserGroups
             .Where(ug => ug.OrganizationId == Id)
             .Include(ug => ug.Accounts)
             .ThenInclude(acc => acc.AuthInfo)
@@ -207,20 +206,16 @@ public class Organization
     /// <summary>
     /// Id рганизации в базе данных
     /// </summary>
-    [Key, DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-    [Column("id")]
     public ulong Id { get; init; }
     
     /// <summary>
     /// Название организации
     /// </summary>
-    [Column("name"), MaxLength(50)]
     public required string Name { get; set; }
 
     /// <summary>
     /// Описание организации
     /// </summary>
-    [Column("description")]
     public string? Description { get; set; }
 
     /// <summary>

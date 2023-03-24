@@ -1,11 +1,8 @@
-﻿using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using TFlic.Models.Services.Contexts;
 
 namespace TFlic.Models.Domain.Organization.Accounts;
 
-[Table("user_groups")]
 public class UserGroup
 {
     #region Methods
@@ -13,27 +10,26 @@ public class UserGroup
     {
         if (Contains(account.Id) is not null) { return false; }
 
-        using var userGroupContext = DbContexts.Get<UserGroupContext>();
-        var accounts = userGroupContext.UserGroups
+        using var dbContext = DbContexts.Get<TFlicDbContext>();
+        var accounts = dbContext.UserGroups
             .Where(ug => ug.GlobalId == GlobalId)
             .Include(ug => ug.Accounts)
             .Single()
             .Accounts;
         
         accounts.Add(account);
-        userGroupContext.SaveChanges();
+        dbContext.SaveChanges();
         
         return true;
     }
 
     public Account? RemoveAccount(ulong id)
     {
-        using var accountContext = DbContexts.Get<AccountContext>();
-        var toRemove = accountContext.Accounts.FirstOrDefault(account => account.Id == id);
+        using var dbContext = DbContexts.Get<TFlicDbContext>();
+        var toRemove = dbContext.Accounts.FirstOrDefault(account => account.Id == id);
         if (toRemove is null) { return null; }
         
-        using var userGroupContext = DbContexts.Get<UserGroupContext>();
-        var accounts = userGroupContext.UserGroups
+        var accounts = dbContext.UserGroups
             .Where(ug => ug.GlobalId == GlobalId)
             .Include(ug => ug.Accounts)
             .ToList()
@@ -42,19 +38,19 @@ public class UserGroup
 
         toRemove = accounts.FirstOrDefault(acc => acc.Id == id);
         if (toRemove is not null) accounts.Remove(toRemove);
-        userGroupContext.SaveChanges();
+        dbContext.SaveChanges();
         
         return toRemove;
     }
 
     public Account? Contains(ulong id)
     {
-        using var userGroupContext = DbContexts.Get<UserGroupContext>();
+        using var dbContext = DbContexts.Get<TFlicDbContext>();
         Account? account = null;
 
         try
         {
-            account = userGroupContext.UserGroups
+            account = dbContext.UserGroups
                 .Where(ug => ug.GlobalId == GlobalId)
                 .Include(ug => ug.Accounts)
                 .Single()
@@ -74,26 +70,21 @@ public class UserGroup
     /// <summary>
     /// Уникальный идентификатор группы пользователей
     /// </summary>
-    [Key, DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-    [Column("global_id")]
     public ulong GlobalId { get; init; }
     
     /// <summary>
     /// Локальный идентификатор группы пользователей
     /// </summary>
-    [Column("local_id")]
     public required short LocalId { get; init; } // todo удалить локальный id
     
     /// <summary>
     /// Уникальный идентификатор организации, которая содержит текущую группу пользователей
     /// </summary>
-    [Column("organization_id")]
     public required ulong OrganizationId { get; set; }
     
     /// <summary> 
     /// Название группы пользователей
     /// </summary>
-    [Column("name"), MaxLength(50)]
     public required string Name { get; set; }
 
     /// <summary>

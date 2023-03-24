@@ -12,8 +12,8 @@ public record OrganizationDto
         Name = organization.Name;
         Description = organization.Description;
         UserGroups = organization.GetUserGroups().Select(ug => new UserGroupIdSet(ug.GlobalId, ug.LocalId)).ToList();
-        ActiveProjects = organization.Projects.Where(prj => !prj.is_archived).Select(ug => ug.id).ToList();
-        ArchivedProjects = organization.Projects.Where(prj => prj.is_archived).Select(ug => ug.id).ToList();
+        ActiveProjects = organization.Projects.Where(prj => !prj.IsArchived).Select(ug => ug.Id).ToList();
+        ArchivedProjects = organization.Projects.Where(prj => prj.IsArchived).Select(ug => ug.Id).ToList();
     }
     
     public ulong Id { get; }

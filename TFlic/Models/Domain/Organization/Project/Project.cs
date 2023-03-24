@@ -1,22 +1,15 @@
-﻿using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
-
-namespace TFlic.Models.Domain.Organization.Project;
-[Table("projects")]
+﻿namespace TFlic.Models.Domain.Organization.Project;
 public class Project
 {
-    [DatabaseGenerated(DatabaseGeneratedOption.Identity), Key]
-    public ulong id { get; set; }
+    public ulong Id { get; set; }
 
-    [Column("organization_id")]
-    [ForeignKey("Server")]
     public ulong OrganizationId { get; set; }
 
-    public Organization Organization { get; set; }
+    public Organization? Organization { get; set; }
 
-    public string name { get; set; }
+    public string Name { get; set; } = string.Empty;
 
-    public bool is_archived { get; set; }
+    public bool IsArchived { get; set; }
 
-    public ICollection<Board> boards { get; set; }
+    public ICollection<Board>? Boards { get; set; }
 }

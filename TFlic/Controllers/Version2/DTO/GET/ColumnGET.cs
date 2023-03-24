@@ -9,7 +9,6 @@ public class ColumnGet
         Id = column.Id;
         Position = column.Position;
         Name = column.Name;
-        LimitOfTask = column.LimitOfTask;
         if (column.Tasks == null) return;
         foreach (var task in column.Tasks) { Tasks.Add(task.Id); }
     }
@@ -18,6 +17,5 @@ public class ColumnGet
     
     public string Name { get; set; } = string.Empty;
     public int Position { get; set; }
-    public int LimitOfTask { get; set; }
     public List<ulong> Tasks { get; } = new();
 }

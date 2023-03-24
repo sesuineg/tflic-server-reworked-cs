@@ -14,20 +14,19 @@ namespace TFlic.Controllers.Version2;
 [Route("api/v2")]
 public class BoardsController : ControllerBase
 {
-    public BoardsController(BoardContext boardContext, ProjectContext projectContext)
+    public BoardsController(TFlicDbContext dbContext)
     {
-        _boardContext = boardContext;
-        _projectContext = projectContext;
+        _dbContext = dbContext;
     }
 
     [HttpGet("projects/{projectId}/boards")]
     public ActionResult<IEnumerable<BoardGet>> GetBoards(ulong projectId)
     {
-        var project = _projectContext.Projects.SingleOrDefault(project => project.id == projectId);
+        var project = _dbContext.Projects.SingleOrDefault(project => project.Id == projectId);
         if (project is null)
             return NotFound();
 
-        var boards = _boardContext.Boards
+        var boards = _dbContext.Boards
             .Where(board => board.ProjectId == projectId)
             .Select(board => new BoardGet(board));
         
@@ -37,8 +36,8 @@ public class BoardsController : ControllerBase
     [HttpGet("boards/{boardId}")]
     public ActionResult<BoardGet> GetBoard(ulong boardId)
     {
-        var board = _boardContext.Boards
-            .Where(board => board.id == boardId)
+        var board = _dbContext.Boards
+            .Where(board => board.Id == boardId)
             .Include(x => x.Project)
             .ThenInclude(x => x.Organization)
             .SingleOrDefault();
@@ -51,14 +50,14 @@ public class BoardsController : ControllerBase
     [HttpDelete("boards/{boardId}")]
     public ActionResult DeleteBoards(ulong boardId)
     {
-        var boardToDelete = _boardContext.Boards
-            .SingleOrDefault(board => board.id == boardId);
+        var boardToDelete = _dbContext.Boards
+            .SingleOrDefault(board => board.Id == boardId);
         
         if (boardToDelete is null) 
             return NotFound($"board with id {boardId} doesn't exist");
         
-        _boardContext.Boards.Remove(boardToDelete);
-        _boardContext.SaveChanges();
+        _dbContext.Boards.Remove(boardToDelete);
+        _dbContext.SaveChanges();
         
         return Ok();
     }
@@ -66,8 +65,8 @@ public class BoardsController : ControllerBase
     [HttpPost("projects/{projectId}/boards")]
     public ActionResult<BoardGet> CreateBoard(ulong projectId, BoardDto board)
     {
-        var project = _projectContext.Projects
-            .SingleOrDefault(project => project.id == projectId);
+        var project = _dbContext.Projects
+            .SingleOrDefault(project => project.Id == projectId);
         if (project is null)
             return NotFound();
         
@@ -76,9 +75,9 @@ public class BoardsController : ControllerBase
             Name = board.Name,
             ProjectId = projectId
         };
-        newBoard.Columns.Add(new Column{Position = 0, LimitOfTask = 0, Name = "backlog"});
-        _boardContext.Boards.Add(newBoard);
-        _boardContext.SaveChanges();
+        newBoard.Columns.Add(new Column{Position = 0, Name = "backlog"});
+        _dbContext.Boards.Add(newBoard);
+        _dbContext.SaveChanges();
         
         return Ok(new BoardGet(newBoard));
     }
@@ -86,18 +85,17 @@ public class BoardsController : ControllerBase
     [HttpPatch("boards/{boardId}")]
     public ActionResult<BoardGet> PatchBoard(ulong boardId, [FromBody] JsonPatchDocument<Board> patch)
     {
-        var boardToPatch = _boardContext.Boards.SingleOrDefault(board => board.id == boardId);
+        var boardToPatch = _dbContext.Boards.SingleOrDefault(board => board.Id == boardId);
         if (boardToPatch is null)
             return NotFound();
         
         patch.ApplyTo(boardToPatch);
-        _boardContext.SaveChanges();
+        _dbContext.SaveChanges();
         
         return Ok(new BoardGet(boardToPatch));
     }
     
     
     
-    private readonly BoardContext _boardContext;
-    private readonly ProjectContext _projectContext;
+    private readonly TFlicDbContext _dbContext;
 }
