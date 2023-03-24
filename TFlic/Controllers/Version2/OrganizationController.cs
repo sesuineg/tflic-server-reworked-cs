@@ -4,16 +4,18 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TFlic.Controllers.Version2.DTO;
 using TFlic.Controllers.Version2.Service;
-using TFlic.Models.Authentication;
-using TFlic.Models.Contexts;
+using TFlic.Models.Domain.Authentication;
+using TFlic.Models.Domain.Organization;
+using TFlic.Models.Domain.Organization.Accounts;
+using TFlic.Models.Services.Contexts;
 using AccountDto = TFlic.Controllers.Version2.DTO.AccountDto;
 
 namespace TFlic.Controllers.Version2;
 
-using ModelAccount = Models.Organization.Accounts.Account;
-using ModelOrganizationException = Models.Organization.OrganizationException;
-using ModelUserGroup = Models.Organization.Accounts.UserGroup;
-using ModelOrganization = Models.Organization.Organization;
+using ModelAccount = Account;
+using ModelOrganizationException = OrganizationException;
+using ModelUserGroup = UserGroup;
+using ModelOrganization = Organization;
 
 [Authorize]
 [ApiController]

@@ -1,6 +1,6 @@
 ﻿using System.Security.Cryptography;
-using TFlic.Models.Authentication;
-using TFlic.Models.Contexts;
+using TFlic.Models.Domain.Authentication;
+using TFlic.Models.Services.Contexts;
 using TFlic.Options;
 
 namespace TFlic.Services;

@@ -2,9 +2,9 @@
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using TFlic.Models.Authentication;
-using TFlic.Models.Contexts;
-using TFlic.Models.Organization.Accounts;
+using TFlic.Models.Domain.Authentication;
+using TFlic.Models.Domain.Organization.Accounts;
+using TFlic.Models.Services.Contexts;
 using AccountDto = TFlic.Controllers.Version2.DTO.AccountDto;
 
 namespace TFlic.Controllers.Version2;

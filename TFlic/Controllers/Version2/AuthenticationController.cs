@@ -4,15 +4,16 @@ using System.Text;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TFlic.Controllers.Version2.DTO;
-using TFlic.Models.Authentication;
-using TFlic.Models.Contexts;
+using TFlic.Models.Domain.Authentication;
+using TFlic.Models.Domain.Organization.Accounts;
+using TFlic.Models.Services.Contexts;
 using TFlic.Services;
 using AuthorizeRequestDto = TFlic.Controllers.Version2.DTO.AuthorizeRequestDto;
 using AuthorizeResponseDto = TFlic.Controllers.Version2.DTO.AuthorizeResponseDto;
 
 namespace TFlic.Controllers.Version2;
 
-using ModelAccount = Models.Organization.Accounts.Account;
+using ModelAccount = Account;
 
 [ApiController]
 [Route("api/v2")]

@@ -1,6 +1,8 @@
-﻿namespace TFlic.Controllers.Version2.DTO;
+﻿using TFlic.Models.Domain.Organization.Accounts;
 
-using ModelAccount = Models.Organization.Accounts.Account;
+namespace TFlic.Controllers.Version2.DTO;
+
+using ModelAccount = Account;
 
 public record AccountDto
 {

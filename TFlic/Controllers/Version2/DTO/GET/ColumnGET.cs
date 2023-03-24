@@ -1,8 +1,10 @@
-﻿namespace TFlic.Controllers.Version2.DTO.GET;
+﻿using TFlic.Models.Domain.Organization.Project;
+
+namespace TFlic.Controllers.Version2.DTO.GET;
 
 public class ColumnGet
 {
-    public ColumnGet(Models.Organization.Project.Column column)
+    public ColumnGet(Column column)
     {
         Id = column.Id;
         Position = column.Position;

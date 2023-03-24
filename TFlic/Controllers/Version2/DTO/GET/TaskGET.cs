@@ -1,8 +1,10 @@
-﻿namespace TFlic.Controllers.Version2.DTO.GET;
+﻿using Task = TFlic.Models.Domain.Organization.Project.Task;
+
+namespace TFlic.Controllers.Version2.DTO.GET;
 
 public class TaskGet
 {
-    public TaskGet(Models.Organization.Project.Task task)
+    public TaskGet(Task task)
     {
         Id = task.Id;
         IdColumn = task.ColumnId;

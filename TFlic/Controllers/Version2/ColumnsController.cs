@@ -3,8 +3,8 @@ using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
 using TFlic.Controllers.Version2.DTO.GET;
 using TFlic.Controllers.Version2.DTO.POST;
-using TFlic.Models.Contexts;
-using TFlic.Models.Organization.Project;
+using TFlic.Models.Domain.Organization.Project;
+using TFlic.Models.Services.Contexts;
 
 namespace TFlic.Controllers.Version2;
 

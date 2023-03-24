@@ -1,9 +1,11 @@
-﻿namespace TFlic.Controllers.Version2.DTO;
+﻿using TFlic.Models.Domain.Organization.Accounts;
+
+namespace TFlic.Controllers.Version2.DTO;
 
 // todo для dto использовать mapster / automapper
 public record UserGroupDto
 {
-    public UserGroupDto(Models.Organization.Accounts.UserGroup userGroup)
+    public UserGroupDto(UserGroup userGroup)
     {
         GlobalId = userGroup.GlobalId;
         LocalId = userGroup.LocalId;

@@ -1,8 +1,10 @@
-﻿namespace TFlic.Controllers.Version2.DTO.GET;
+﻿using TFlic.Models.Domain.Organization.Project;
+
+namespace TFlic.Controllers.Version2.DTO.GET;
 
 public class BoardGet
 {
-    public BoardGet(Models.Organization.Project.Board board)
+    public BoardGet(Board board)
     {
         Id = board.id;
         Name = board.Name;

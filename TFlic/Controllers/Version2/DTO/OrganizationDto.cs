@@ -1,6 +1,8 @@
-﻿namespace TFlic.Controllers.Version2.DTO;
+﻿using TFlic.Models.Domain.Organization;
 
-using ModelOrganization = Models.Organization.Organization;
+namespace TFlic.Controllers.Version2.DTO;
+
+using ModelOrganization = Organization;
 
 public record OrganizationDto
 {

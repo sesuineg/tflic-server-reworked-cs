@@ -1,8 +1,10 @@
-﻿namespace TFlic.Controllers.Version2.DTO.GET;
+﻿using TFlic.Models.Domain.Organization.Project;
+
+namespace TFlic.Controllers.Version2.DTO.GET;
 
 public class ProjectGet
 {
-    public ProjectGet(Models.Organization.Project.Project project)
+    public ProjectGet(Project project)
     {
         Id = project.id;
         Name = project.name;
