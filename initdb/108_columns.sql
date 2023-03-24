@@ -1,6 +1,6 @@
-CREATE TABLE columns (
-    id BIGSERIAL PRIMARY KEY,
-    board_id BIGINT references boards(id),
-    position INT NOT NULL,
-    name VARCHAR(50) NOT NULL
+create table columns (
+    id bigserial primary key,
+    board_id bigint references boards(id) on delete cascade on update cascade,
+    position int not null,
+    name varchar(50) not null
 )

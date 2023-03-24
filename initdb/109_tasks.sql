@@ -1,15 +1,14 @@
-﻿CREATE TABLE tasks (
-    id BIGSERIAL PRIMARY KEY,
-    column_id BIGINT references columns(id),
-    --"LogId" BIGINT references Log("Id"),
+﻿create table tasks (
+    id bigserial primary key,
+    column_id bigint references columns(id) on delete cascade on update cascade,
 
-    position INT NOT NULL,
-    name VARCHAR(50) NOT NULL,
-    description TEXT NOT NULL,
-    creation_time DATE NOT NULL,
-    status VARCHAR(20) NOT NULL,
-    priority INT NOT NULL default(1),
-    id_executor BIGINT references accounts(id),
-    deadline DATE NOT NULL,
-    estimated_time INT NOT NULL default(0)
+    position int not null,
+    name varchar(50) not null,
+    description text not null,
+    creation_time date not null,
+    status varchar(20) not null,
+    priority int not null default(1),
+    id_executor bigint references accounts(id) on delete no action on update cascade,
+    deadline date not null,
+    estimated_time int not null default(0)
 )
