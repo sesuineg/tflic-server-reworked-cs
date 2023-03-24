@@ -1,6 +1,11 @@
 create table columns (
-    id bigserial primary key,
-    board_id bigint references boards(id) on delete cascade on update cascade,
+    id bigserial,
+    board_id bigint not null,
     position int not null,
-    name varchar(50) not null
+    name varchar(50) not null,
+
+    primary key (id),
+
+    foreign key (board_id) references boards(id)
+        on delete cascade on update cascade
 )

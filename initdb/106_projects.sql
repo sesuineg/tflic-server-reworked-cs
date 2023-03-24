@@ -1,6 +1,11 @@
 create table projects (
-    id bigserial primary key,
-    organization_id bigint references organizations(id) on delete cascade on update cascade,
+    id bigserial,
+    organization_id bigint not null,
     is_archived boolean default false,
-    name varchar(50) not null
+    name varchar(50) not null,
+    
+    primary key (id),
+        
+    foreign key (organization_id) references organizations(id) 
+        on delete cascade on update cascade
 )

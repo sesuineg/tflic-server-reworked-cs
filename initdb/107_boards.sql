@@ -1,5 +1,10 @@
 create table boards (
-    id bigserial primary key,
-    project_id bigint references projects(id) on delete cascade on update cascade,
-    name varchar(50) not null
+    id bigserial,
+    project_id bigint not null,
+    name varchar(50) not null,
+
+    primary key (id),
+
+    foreign key (project_id) references projects(id)
+        on delete cascade on update cascade
 )
